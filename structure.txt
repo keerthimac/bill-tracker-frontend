@@ -1,0 +1,28 @@
+bill-tracker-frontend/
+├── src/
+│   ├── app/                 # For Redux store setup and core app logic
+│   │   ├── store.ts
+│   │   └── hooks.ts         # Typed hooks for useDispatch and useSelector
+│   ├── components/          # Global reusable UI components (Button, Modal, etc.)
+│   ├── features/            # Each feature gets its own folder
+│   │   ├── sites/
+│   │   │   ├── SiteList.tsx
+│   │   │   ├── sitesSlice.ts  # Redux logic for sites
+│   │   │   ├── AddSiteForm.tsx (example for later)
+│   │   │   └── EditSiteModal.tsx (example for later)
+│   │   ├── itemCategories/
+│   │   │   ├── ItemCategoryList.tsx
+│   │   │   └── itemCategoriesSlice.ts
+│   │   ├── suppliers/
+│   │   │   └── ...
+│   │   └── purchaseBills/
+│   │       └── ...
+│   ├── pages/               # (Optional) Top-level page components that orchestrate features
+│   │   ├── SitesPage.tsx
+│   │   └── DashboardPage.tsx
+│   ├── services/            # (Optional) Can hold API client setup or non-RTK API functions
+│   │   └── apiClient.ts     # e.g., an axios instance or base fetch wrapper
+│   ├── App.tsx              # Main application component (routing setup)
+│   └── main.tsx             # Entry point (renders App, provides Redux store)
+├── public/
+└── package.json
