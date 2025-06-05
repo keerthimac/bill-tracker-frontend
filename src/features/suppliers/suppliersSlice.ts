@@ -24,25 +24,33 @@ interface NewSupplierData {
   address?: string;
 }
 
+interface UpdateSupplierData extends NewSupplierData {
+    id: number; // ID is crucial for knowing which supplier to update
+}
+
 // Define the state for this slice
 interface SuppliersState {
-  suppliers: Supplier[];
-  status: "idle" | "loading" | "succeeded" | "failed"; // For fetching list
-  error: string | null | undefined; // Error for fetching list
-  createStatus: "idle" | "loading" | "succeeded" | "failed"; // For creation operation
-  createError: string | null | undefined; // Error for creation operation
+    suppliers: Supplier[];
+    status: 'idle' | 'loading' | 'succeeded' | 'failed';
+    error: string | null | undefined;
+    createStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
+    createError: string | null | undefined;
+    updateStatus: 'idle' | 'loading' | 'succeeded' | 'failed'; // <<< NEW
+    updateError: string | null | undefined; // <<< NEW
 }
 
 const initialState: SuppliersState = {
-  suppliers: [],
-  status: "idle",
-  error: null,
-  createStatus: "idle",
-  createError: null,
+    suppliers: [],
+    status: 'idle',
+    error: null,
+    createStatus: 'idle',
+    createError: null,
+    updateStatus: 'idle', // <<< NEW
+    updateError: null,    // <<< NEW
 };
 
 // Define your API base URL
-const API_BASE_URL = "http://localhost:8080/api/v1";
+const API_BASE_URL = 'http://localhost:8080/api/v1';
 
 // Async thunk for fetching suppliers
 export const fetchSuppliers = createAsyncThunk<
@@ -103,67 +111,72 @@ export const createSupplier = createAsyncThunk<
   }
 });
 
-// Create the slice
-const suppliersSlice = createSlice({
-  name: "suppliers",
-  initialState,
-  reducers: {
-    // Synchronous action to reset the creation status/error
-    resetCreateSupplierStatus: (state) => {
-      state.createStatus = "idle";
-      state.createError = null;
-    },
-  },
-  extraReducers: (builder) => {
-    builder
-      // Cases for fetchSuppliers
-      .addCase(fetchSuppliers.pending, (state) => {
-        state.status = "loading";
-        state.error = null;
-      })
-      .addCase(
-        fetchSuppliers.fulfilled,
-        (state, action: PayloadAction<Supplier[]>) => {
-          state.status = "succeeded";
-          state.suppliers = action.payload;
+export const updateSupplier = createAsyncThunk<
+    Supplier,
+    UpdateSupplierData,
+    { rejectValue: { message: string, validationErrors?: string[] } }
+>('suppliers/updateSupplier', async (supplierData, { rejectWithValue }) => {
+    try {
+        const { id, ...updateData } = supplierData;
+        const response = await fetch(`${API_BASE_URL}/suppliers/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updateData),
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            return rejectWithValue({
+                message: errorData.message || `HTTP error! Status: ${response.status}`,
+                validationErrors: errorData.validationErrors
+            });
         }
-      )
-      .addCase(fetchSuppliers.rejected, (state, action) => {
-        state.status = "failed";
-        state.error = action.payload || action.error.message;
-      })
-      // Cases for createSupplier
-      .addCase(createSupplier.pending, (state) => {
-        state.createStatus = "loading";
-        state.createError = null;
-      })
-      .addCase(
-        createSupplier.fulfilled,
-        (state, action: PayloadAction<Supplier>) => {
-          state.createStatus = "succeeded";
-          state.suppliers.push(action.payload); // Add the new supplier to the list
-          // Optionally, sort:
-          // state.suppliers.sort((a, b) => a.name.localeCompare(b.name));
-        }
-      )
-      .addCase(createSupplier.rejected, (state, action) => {
-        state.createStatus = "failed";
-        if (action.payload) {
-          // Error payload from rejectWithValue
-          state.createError = action.payload.message;
-          // You could also store action.payload.validationErrors if needed for display
-        } else {
-          // Generic error from thunk
-          state.createError = action.error.message;
-        }
-      });
-  },
+        return await response.json();
+    } catch (err: any) {
+        return rejectWithValue({ message: err.message || 'Failed to update supplier' });
+    }
 });
 
-// Export synchronous actions
-export const { resetCreateSupplierStatus } = suppliersSlice.actions;
+// Create the slice
+const suppliersSlice = createSlice({
+    name: 'suppliers',
+    initialState,
+    reducers: {
+        resetCreateSupplierStatus: (state) => { /* ... */ state.createStatus = 'idle'; state.createError = null; },
+        resetUpdateSupplierStatus: (state) => { // <<< NEW
+            state.updateStatus = 'idle';
+            state.updateError = null;
+        }
+    },
+    extraReducers: (builder) => {
+        builder
+            // (Keep existing cases for fetchSuppliers and createSupplier)
+            .addCase(fetchSuppliers.pending, (state) => { state.status = 'loading'; state.error = null; })
+            .addCase(fetchSuppliers.fulfilled, (state, action) => { state.status = 'succeeded'; state.suppliers = action.payload; })
+            .addCase(fetchSuppliers.rejected, (state, action) => { state.status = 'failed'; state.error = action.payload || action.error.message; })
+            .addCase(createSupplier.pending, (state) => { state.createStatus = 'loading'; state.createError = null; })
+            .addCase(createSupplier.fulfilled, (state, action) => { state.createStatus = 'succeeded'; state.suppliers.push(action.payload); })
+            .addCase(createSupplier.rejected, (state, action) => { state.createStatus = 'failed'; if(action.payload) state.createError = action.payload.message; else state.createError = action.error.message; })
+            // NEW: Cases for updateSupplier
+            .addCase(updateSupplier.pending, (state) => {
+                state.updateStatus = 'loading';
+                state.updateError = null;
+            })
+            .addCase(updateSupplier.fulfilled, (state, action: PayloadAction<Supplier>) => {
+                state.updateStatus = 'succeeded';
+                const index = state.suppliers.findIndex(sup => sup.id === action.payload.id);
+                if (index !== -1) {
+                    state.suppliers[index] = action.payload;
+                }
+            })
+            .addCase(updateSupplier.rejected, (state, action) => {
+                state.updateStatus = 'failed';
+                if (action.payload) { state.updateError = action.payload.message; }
+                else { state.updateError = action.error.message; }
+            });
+    },
+});
 
-// Export the reducer
+export const { resetCreateSupplierStatus, resetUpdateSupplierStatus } = suppliersSlice.actions; // <<< EXPORT NEW ACTION
 export default suppliersSlice.reducer;
 
 // Export selectors
@@ -178,3 +191,12 @@ export const selectCreateSupplierStatus = (state: RootState) =>
   state.suppliers.createStatus;
 export const selectCreateSupplierError = (state: RootState) =>
   state.suppliers.createError;
+
+// Selectors for update status/error
+export const selectUpdateSupplierStatus = (state: RootState) => state.suppliers.updateStatus;
+export const selectUpdateSupplierError = (state: RootState) => state.suppliers.updateError;
+
+// Selector to find a single supplier by ID
+export const selectSupplierById = (state: RootState, supplierId: number) =>
+    state.suppliers.suppliers.find(supplier => supplier.id === supplierId);
+
