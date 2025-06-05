@@ -4,6 +4,7 @@ import AddSiteForm from "./features/sites/AddSiteForm"; // <<< IMPORT
 import ItemCategoryList from "./features/itemCategories/ItemCategoryList";
 import SupplierList from "./features/suppliers/SupplierList";
 import AddItemCategoryForm from "./features/itemCategories/AddItemCategoryForm";
+import AddSupplierForm from "./features/suppliers/AddSupplierForm";
 
 function App() {
   return (
@@ -24,7 +25,10 @@ function App() {
           <ItemCategoryList />
         </section>
         <hr />
-        <SupplierList />
+        <section>
+          <AddSupplierForm /> {/* <<< ADD THE FORM */}
+          <SupplierList />  
+        </section>
       </main>
     </div>
   );
