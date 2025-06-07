@@ -285,8 +285,12 @@ function PurchaseBillDetail(): JSX.Element {
         <tbody>
           {bill.billItems.map((item: BillItem_Ref) => (
             <tr key={item.id}>
-              <td style={thTdStyle}>{item.materialName}</td>
-              <td style={thTdStyle}>{item.itemCategory.name}</td>
+              <td style={thTdStyle}>{item.masterMaterialName}</td>
+              {/* Use masterMaterialName */}
+              {/* --- THIS IS THE FIX --- */}
+              <td style={thTdStyle}>{item.itemCategoryName}</td>
+              {/* Change this from item.itemCategory.name */}
+              {/* --- END OF FIX --- */}
               <td style={thTdStyle}>{item.quantity.toLocaleString()}</td>
               <td style={thTdStyle}>{item.unit}</td>
               <td style={thTdStyle}>

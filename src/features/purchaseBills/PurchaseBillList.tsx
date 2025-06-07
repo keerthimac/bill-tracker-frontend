@@ -1,39 +1,12 @@
 import React, { useEffect, type JSX } from "react";
 import { useAppSelector, useAppDispatch } from "../../app/hooks";
+import { Link } from "react-router-dom";
 import {
   fetchPurchaseBills,
   selectAllPurchaseBills,
   selectPurchaseBillsStatus,
   selectPurchaseBillsError,
 } from "./purchaseBillsSlice";
-import { Link } from "react-router-dom";
-// import { Link } from 'react-router-dom'; // For later when we add "View Details" links
-
-// Basic styling (can be moved to a CSS file or styled components)
-const listStyle: React.CSSProperties = {
-  listStyleType: "none",
-  padding: 0,
-};
-
-const listItemStyle: React.CSSProperties = {
-  border: "1px solid #ddd",
-  padding: "15px",
-  marginBottom: "10px",
-  borderRadius: "5px",
-  backgroundColor: "#f9f9f9",
-};
-
-const billHeaderStyle: React.CSSProperties = {
-  fontSize: "1.2em",
-  fontWeight: "bold",
-  marginBottom: "5px",
-};
-
-const detailStyle: React.CSSProperties = {
-  fontSize: "0.9em",
-  color: "#555",
-  marginBottom: "3px",
-};
 
 function PurchaseBillList(): JSX.Element {
   const dispatch = useAppDispatch();
@@ -47,62 +20,75 @@ function PurchaseBillList(): JSX.Element {
     }
   }, [status, dispatch]);
 
-  let content;
-
   if (status === "loading") {
-    content = <p>"Loading purchase bills..."</p>;
-  } else if (status === "succeeded") {
-    if (!bills || bills.length === 0) {
-      content = <p>No purchase bills found.</p>;
-    } else {
-      content = (
-        <ul style={listStyle}>
-          {bills.map((bill) => (
-            <li key={bill.id} style={listItemStyle}>
-              <div style={billHeaderStyle}>
-                <Link
-                  to={`/purchase-bills/${bill.id}`}
-                  style={{ textDecoration: "none", color: "inherit" }}
-                >
-                  {" "}
-                  {/* <<< Link on Bill Number */}
-                  Bill #: {bill.billNumber}
-                </Link>
-              </div>
-              <div style={detailStyle}>
-                Date: {new Date(bill.billDate).toLocaleDateString()}
-              </div>
-              <div style={detailStyle}>Supplier: {bill.supplier.name}</div>
-              <div style={detailStyle}>Site: {bill.site.name}</div>
-              <div style={detailStyle}>
-                Total Amount:{" "}
-                {bill.totalAmount.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </div>
-              <div style={detailStyle}>GRN Status: {bill.overallGrnStatus}</div>
-              <div style={detailStyle}>Items: {bill.billItems.length}</div>
-              {/* Later, add links/buttons for actions:
-                            <Link to={`/purchase-bills/${bill.id}`}>View Details</Link> |
-                            <Link to={`/purchase-bills/edit/${bill.id}`}>Edit</Link> |
-                            <button>Update GRN</button>
-                            */}
-            </li>
-          ))}
-        </ul>
-      );
-    }
-  } else if (status === "failed") {
-    content = (
-      <p style={{ color: "red" }}>Error loading purchase bills: {error}</p>
+    return (
+      <div className="flex justify-center p-8">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
+    );
+  }
+
+  if (status === "failed") {
+    return (
+      <div className="alert alert-error">
+        <div>
+          <span>Error loading purchase bills: {error}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "succeeded" && (!bills || bills.length === 0)) {
+    return (
+      <div className="text-center p-4 bg-base-200 rounded-md">
+        No purchase bills found.
+      </div>
     );
   }
 
   return (
-    <div>
-      <h2>Purchase Bills</h2>
-      {content}
+    <div className="overflow-x-auto bg-base-100 shadow-xl rounded-lg">
+      <table className="table w-full table-zebra">
+        <thead>
+          <tr>
+            <th>Bill Number</th>
+            <th>Date</th>
+            <th>Supplier</th>
+            <th>Site</th>
+            <th className="text-right">Total Amount</th>
+            <th>GRN Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {bills.map((bill) => (
+            <tr key={bill.id} className="hover">
+              <td className="font-semibold">{bill.billNumber}</td>
+              <td>{new Date(bill.billDate).toLocaleDateString()}</td>
+              <td>{bill.supplier.name}</td>
+              <td>{bill.site.name}</td>
+              <td className="text-right">
+                {bill.totalAmount.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                })}
+              </td>
+              <td>
+                <span className="badge badge-ghost badge-sm">
+                  {bill.overallGrnStatus}
+                </span>
+              </td>
+              <td>
+                <Link
+                  to={`/purchase-bills/${bill.id}`}
+                  className="btn btn-ghost btn-xs"
+                >
+                  View Details
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

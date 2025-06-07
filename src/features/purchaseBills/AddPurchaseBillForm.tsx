@@ -1,18 +1,15 @@
-import React, { useState, useEffect, type JSX } from "react";
+import React, { useState, useEffect, useMemo, type JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 
-// Actions and selectors from purchaseBillsSlice
+// --- Redux Imports ---
 import {
   createPurchaseBill,
   selectCreatePurchaseBillStatus,
   selectCreatePurchaseBillError,
   resetCreatePurchaseBillStatus,
-  type NewPurchaseBillData, // Assuming this is exported from the slice or defined here
-  // NewBillItemData, // This is part of NewPurchaseBillData
+  type NewPurchaseBillData,
 } from "./purchaseBillsSlice";
-
-// Actions and selectors for lookup data
 import {
   fetchSites,
   selectAllSites,
@@ -24,83 +21,148 @@ import {
   selectSuppliersStatus,
 } from "../suppliers/suppliersSlice";
 import {
-  fetchItemCategories,
-  selectAllItemCategories,
-  selectItemCategoriesStatus,
-} from "../itemCategories/itemCategoriesSlice";
+  fetchMasterMaterials,
+  selectAllMasterMaterials,
+  selectMasterMaterialsStatus,
+} from "../masterMaterials/masterMaterialsSlice";
 
-// Define local type for an item being added (matches NewBillItemData from slice)
+// --- API Service Import ---
+import { fetchActivePrice } from "../../services/apiService";
+
+// --- Local Types ---
 interface CurrentBillItem {
-  materialName: string;
-  itemCategoryId: string; // Use string for form select, convert to number on submit
-  quantity: string; // Use string for form input, convert to number
+  masterMaterialId: string;
+  quantity: string;
   unit: string;
-  unitPrice: string; // Use string for form input, convert to number
+  unitPrice: string;
+  isPriceLocked: boolean; // For the editable price feature
 }
 
 const initialBillItemState: CurrentBillItem = {
-  materialName: "",
-  itemCategoryId: "",
+  masterMaterialId: "",
   quantity: "",
   unit: "",
   unitPrice: "",
+  isPriceLocked: false,
 };
 
 function AddPurchaseBillForm(): JSX.Element {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
-  // Form state for Purchase Bill header
-  const [billNumber, setBillNumber] = useState<string>("");
-  const [billDate, setBillDate] = useState<string>(""); // YYYY-MM-DD
-  const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
-  const [selectedSiteId, setSelectedSiteId] = useState<string>("");
-
-  // Form state for the current bill item being entered
+  // --- Form State ---
+  const [billNumber, setBillNumber] = useState("");
+  const [billDate, setBillDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  const [selectedSupplierId, setSelectedSupplierId] = useState("");
+  const [selectedSiteId, setSelectedSiteId] = useState("");
   const [currentItem, setCurrentItem] =
     useState<CurrentBillItem>(initialBillItemState);
-  // State for the list of bill items added to this bill
   const [billItems, setBillItems] = useState<CurrentBillItem[]>([]);
 
-  // Redux state for lookup data
+  // --- Redux Selectors ---
   const sites = useAppSelector(selectAllSites);
   const sitesStatus = useAppSelector(selectSitesStatus);
   const suppliers = useAppSelector(selectAllSuppliers);
   const suppliersStatus = useAppSelector(selectSuppliersStatus);
-  const itemCategories = useAppSelector(selectAllItemCategories);
-  const itemCategoriesStatus = useAppSelector(selectItemCategoriesStatus);
-
-  // Redux state for purchase bill creation
+  const masterMaterials = useAppSelector(selectAllMasterMaterials);
+  const masterMaterialsStatus = useAppSelector(selectMasterMaterialsStatus);
   const createStatus = useAppSelector(selectCreatePurchaseBillStatus);
   const createError = useAppSelector(selectCreatePurchaseBillError);
 
-  // Fetch lookup data on component mount if not already loaded
+  const isHeaderSelected = !!(selectedSupplierId && selectedSiteId && billDate);
+
+  // --- Effects ---
   useEffect(() => {
     if (sitesStatus === "idle") dispatch(fetchSites());
     if (suppliersStatus === "idle") dispatch(fetchSuppliers());
-    if (itemCategoriesStatus === "idle") dispatch(fetchItemCategories());
-  }, [sitesStatus, suppliersStatus, itemCategoriesStatus, dispatch]);
+    if (masterMaterialsStatus === "idle") dispatch(fetchMasterMaterials());
+  }, [sitesStatus, suppliersStatus, masterMaterialsStatus, dispatch]);
 
-  // Reset create status when component unmounts or on success/failure
   useEffect(() => {
-    return () => {
-      if (createStatus === "succeeded" || createStatus === "failed") {
-        dispatch(resetCreatePurchaseBillStatus());
+    const getPrice = async () => {
+      if (
+        isHeaderSelected &&
+        currentItem.masterMaterialId &&
+        currentItem.unit &&
+        billDate
+      ) {
+        try {
+          const activePrice = await fetchActivePrice({
+            supplierId: parseInt(selectedSupplierId),
+            masterMaterialId: parseInt(currentItem.masterMaterialId),
+            unit: currentItem.unit,
+            date: billDate,
+          });
+          if (activePrice) {
+            setCurrentItem((prev) => ({
+              ...prev,
+              unitPrice: String(activePrice.price),
+              isPriceLocked: true,
+            }));
+          } else {
+            setCurrentItem((prev) => ({
+              ...prev,
+              unitPrice: "",
+              isPriceLocked: false,
+            }));
+          }
+        } catch (error) {
+          console.warn("Could not fetch active price:", error);
+          setCurrentItem((prev) => ({ ...prev, isPriceLocked: false }));
+        }
       }
     };
-  }, [createStatus, dispatch]);
+    const handler = setTimeout(() => getPrice(), 300);
+    return () => clearTimeout(handler);
+  }, [
+    selectedSupplierId,
+    currentItem.masterMaterialId,
+    currentItem.unit,
+    billDate,
+    isHeaderSelected,
+  ]);
 
+  // --- Memoized Data for Display ---
+  const billItemsWithDetails = useMemo(() => {
+    return billItems.map((item) => {
+      const material = masterMaterials.find(
+        (m) => m.id === parseInt(item.masterMaterialId, 10)
+      );
+      return { ...item, materialName: material?.name || "Unknown Material" };
+    });
+  }, [billItems, masterMaterials]);
+
+  // --- Event Handlers ---
   const handleCurrentItemChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    setCurrentItem({ ...currentItem, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    const isManualPriceEntry = name === "unitPrice";
+    setCurrentItem((prev) => ({
+      ...prev,
+      [name]: value,
+      isPriceLocked: isManualPriceEntry ? false : prev.isPriceLocked,
+    }));
+
+    if (name === "masterMaterialId" && value) {
+      const material = masterMaterials.find(
+        (m) => m.id === parseInt(value, 10)
+      );
+      if (material) {
+        setCurrentItem((prev) => ({
+          ...initialBillItemState,
+          masterMaterialId: value,
+          unit: material.defaultUnit,
+        }));
+      }
+    }
   };
 
   const handleAddItem = () => {
-    // Basic validation for current item before adding
     if (
-      !currentItem.materialName ||
-      !currentItem.itemCategoryId ||
+      !currentItem.masterMaterialId ||
       !currentItem.quantity ||
       !currentItem.unit ||
       !currentItem.unitPrice
@@ -110,269 +172,313 @@ function AddPurchaseBillForm(): JSX.Element {
     }
     if (
       isNaN(parseFloat(currentItem.quantity)) ||
-      isNaN(parseFloat(currentItem.unitPrice))
+      isNaN(parseFloat(currentItem.unitPrice)) ||
+      parseFloat(currentItem.quantity) <= 0
     ) {
-      alert("Quantity and Unit Price must be numbers.");
+      alert("Please enter a valid, positive quantity and price.");
       return;
     }
     setBillItems([...billItems, { ...currentItem }]);
-    setCurrentItem(initialBillItemState); // Reset for next item
+    setCurrentItem(initialBillItemState);
   };
 
   const handleRemoveItem = (indexToRemove: number) => {
     setBillItems(billItems.filter((_, index) => index !== indexToRemove));
   };
 
-  const canSaveBill =
-    billNumber &&
-    billDate &&
-    selectedSupplierId &&
-    selectedSiteId &&
-    billItems.length > 0 &&
-    createStatus !== "loading";
-
   const handleSubmitBill = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!canSaveBill) {
+    if (
+      !billNumber ||
+      !isHeaderSelected ||
+      billItems.length === 0 ||
+      createStatus === "loading"
+    ) {
       alert("Please fill all required bill details and add at least one item.");
       return;
     }
-
     const newPurchaseBillData: NewPurchaseBillData = {
       billNumber,
       billDate,
-      supplierId: parseInt(selectedSupplierId, 10),
-      siteId: parseInt(selectedSiteId, 10),
+      supplierId: parseInt(selectedSupplierId),
+      siteId: parseInt(selectedSiteId),
       items: billItems.map((item) => ({
-        materialName: item.materialName,
-        itemCategoryId: parseInt(item.itemCategoryId, 10),
+        masterMaterialId: parseInt(item.masterMaterialId),
         quantity: parseFloat(item.quantity),
         unit: item.unit,
         unitPrice: parseFloat(item.unitPrice),
       })),
     };
-
     try {
-      const resultAction = await dispatch(
-        createPurchaseBill(newPurchaseBillData)
-      ).unwrap();
-      // Clear form and navigate on success
-      setBillNumber("");
-      setBillDate("");
-      setSelectedSupplierId("");
-      setSelectedSiteId("");
-      setBillItems([]);
-      setCurrentItem(initialBillItemState);
+      await dispatch(createPurchaseBill(newPurchaseBillData)).unwrap();
       alert("Purchase Bill created successfully!");
-      navigate(`/purchase-bills`); // Or to the detail page: /purchase-bills/${resultAction.id}
+      navigate("/purchase-bills");
     } catch (err: any) {
       console.error("Failed to create purchase bill:", err);
-      // Error message is already in createError from the slice and will be displayed
-      // If err contains validationErrors, you might want to display them more specifically
-      // alert(`Error: ${err.message || 'Could not save purchase bill'}`);
     }
   };
 
-  // --- Render ---
   if (
     sitesStatus === "loading" ||
     suppliersStatus === "loading" ||
-    itemCategoriesStatus === "loading"
+    masterMaterialsStatus === "loading"
   ) {
-    return <p>Loading prerequisite data...</p>;
+    return <p>Loading form data...</p>;
   }
 
   return (
-    <div
-      style={{
-        border: "1px solid #ccc",
-        padding: "20px",
-        marginBottom: "20px",
-      }}
-    >
-      <h2>Add New Purchase Bill</h2>
-      <form onSubmit={handleSubmitBill}>
-        {/* Bill Header Fields */}
-        <fieldset
-          style={{ marginBottom: "15px", padding: "10px", borderColor: "#ddd" }}
-        >
-          <legend>Bill Details</legend>
-          <div>
-            <label htmlFor="billNumber">Bill Number:</label>
-            <input
-              type="text"
-              id="billNumber"
-              value={billNumber}
-              onChange={(e) => setBillNumber(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="billDate">Bill Date:</label>
-            <input
-              type="date"
-              id="billDate"
-              value={billDate}
-              onChange={(e) => setBillDate(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="selectedSupplierId">Supplier:</label>
-            <select
-              id="selectedSupplierId"
-              value={selectedSupplierId}
-              onChange={(e) => setSelectedSupplierId(e.target.value)}
-              required
-            >
-              <option value="">Select Supplier</option>
-              {suppliers.map((supplier) => (
-                <option key={supplier.id} value={supplier.id}>
-                  {supplier.name}
+    <div className="card bg-base-100 shadow-xl max-w-4xl mx-auto">
+      <div className="card-body">
+        <h2 className="card-title text-2xl">Add New Purchase Bill</h2>
+        <form onSubmit={handleSubmitBill} className="space-y-6">
+          <fieldset className="grid grid-cols-1 md:grid-cols-2 gap-4 border border-base-300 p-4 rounded-md">
+            <legend className="font-semibold px-2">Bill Details</legend>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Bill Number</span>
+              </label>
+              <input
+                type="text"
+                value={billNumber}
+                onChange={(e) => setBillNumber(e.target.value)}
+                className="input input-bordered w-full"
+                required
+              />
+            </div>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Bill Date</span>
+              </label>
+              <input
+                type="date"
+                value={billDate}
+                onChange={(e) => setBillDate(e.target.value)}
+                className="input input-bordered w-full"
+                required
+              />
+            </div>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Supplier</span>
+              </label>
+              <select
+                value={selectedSupplierId}
+                onChange={(e) => setSelectedSupplierId(e.target.value)}
+                className="select select-bordered"
+                required
+              >
+                <option value="" disabled>
+                  Select Supplier
                 </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="selectedSiteId">Site:</label>
-            <select
-              id="selectedSiteId"
-              value={selectedSiteId}
-              onChange={(e) => setSelectedSiteId(e.target.value)}
-              required
-            >
-              <option value="">Select Site</option>
-              {sites.map((site) => (
-                <option key={site.id} value={site.id}>
-                  {site.name}
+                {suppliers.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Site</span>
+              </label>
+              <select
+                value={selectedSiteId}
+                onChange={(e) => setSelectedSiteId(e.target.value)}
+                className="select select-bordered"
+                required
+              >
+                <option value="" disabled>
+                  Select Site
                 </option>
-              ))}
-            </select>
-          </div>
-        </fieldset>
-
-        {/* Bill Items Section */}
-        <fieldset
-          style={{ marginBottom: "15px", padding: "10px", borderColor: "#ddd" }}
-        >
-          <legend>Add Bill Item</legend>
-          <div>
-            <label htmlFor="materialName">Material Name:</label>
-            <input
-              type="text"
-              name="materialName"
-              value={currentItem.materialName}
-              onChange={handleCurrentItemChange}
-            />
-          </div>
-          <div>
-            <label htmlFor="itemCategoryId">Category:</label>
-            <select
-              name="itemCategoryId"
-              value={currentItem.itemCategoryId}
-              onChange={handleCurrentItemChange}
-            >
-              <option value="">Select Category</option>
-              {itemCategories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="quantity">Quantity:</label>
-            <input
-              type="number"
-              step="any"
-              name="quantity"
-              value={currentItem.quantity}
-              onChange={handleCurrentItemChange}
-            />
-          </div>
-          <div>
-            <label htmlFor="unit">Unit:</label>
-            <input
-              type="text"
-              name="unit"
-              value={currentItem.unit}
-              onChange={handleCurrentItemChange}
-            />
-          </div>
-          <div>
-            <label htmlFor="unitPrice">Unit Price:</label>
-            <input
-              type="number"
-              step="any"
-              name="unitPrice"
-              value={currentItem.unitPrice}
-              onChange={handleCurrentItemChange}
-            />
-          </div>
-          <button
-            type="button"
-            onClick={handleAddItem}
-            style={{ marginTop: "10px" }}
-          >
-            Add Item to Bill
-          </button>
-        </fieldset>
-
-        {/* Display Added Bill Items */}
-        {billItems.length > 0 && (
-          <fieldset
-            style={{
-              marginBottom: "15px",
-              padding: "10px",
-              borderColor: "#007bff",
-            }}
-          >
-            <legend>Current Bill Items</legend>
-            <ul style={{ listStyle: "none", padding: 0 }}>
-              {billItems.map((item, index) => (
-                <li
-                  key={index}
-                  style={{
-                    borderBottom: "1px dashed #eee",
-                    paddingBottom: "5px",
-                    marginBottom: "5px",
-                  }}
-                >
-                  {item.materialName} - Qty: {item.quantity} {item.unit} @{" "}
-                  {item.unitPrice} each (Category ID: {item.itemCategoryId}){" "}
-                  {/* You might want to display category name here */}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveItem(index)}
-                    style={{ marginLeft: "10px", color: "red" }}
-                  >
-                    Remove
-                  </button>
-                </li>
-              ))}
-            </ul>
+                {sites.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </fieldset>
-        )}
 
-        <button type="submit" disabled={!canSaveBill}>
-          {createStatus === "loading"
-            ? "Saving Purchase Bill..."
-            : "Save Purchase Bill"}
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate("/purchase-bills")}
-          style={{ marginLeft: "10px" }}
-          disabled={createStatus === "loading"}
-        >
-          Cancel
-        </button>
-        {createStatus === "failed" && createError && (
-          <p style={{ color: "red", marginTop: "10px" }}>
-            Error creating bill: {createError}
-          </p>
-        )}
-      </form>
+          <fieldset
+            className="border border-base-300 p-4 rounded-md"
+            disabled={!isHeaderSelected}
+          >
+            <legend className="font-semibold px-2">Add Bill Item</legend>
+            {!isHeaderSelected && (
+              <p className="text-warning p-2 rounded-md bg-yellow-50 border border-yellow-200">
+                Please select a Supplier, Site, and Date first.
+              </p>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+              <div className="form-control md:col-span-2">
+                <label className="label">
+                  <span className="label-text">Master Material</span>
+                </label>
+                <select
+                  name="masterMaterialId"
+                  value={currentItem.masterMaterialId}
+                  onChange={handleCurrentItemChange}
+                  className="select select-bordered"
+                >
+                  <option value="">Select Material</option>
+                  {masterMaterials.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Unit</span>
+                </label>
+                <input
+                  type="text"
+                  name="unit"
+                  value={currentItem.unit}
+                  onChange={handleCurrentItemChange}
+                  className="input input-bordered"
+                />
+              </div>
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Quantity</span>
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  name="quantity"
+                  value={currentItem.quantity}
+                  onChange={handleCurrentItemChange}
+                  className="input input-bordered"
+                />
+              </div>
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Unit Price</span>
+                </label>
+                <div className="join w-full">
+                  <input
+                    type="number"
+                    step="any"
+                    name="unitPrice"
+                    value={currentItem.unitPrice}
+                    onChange={handleCurrentItemChange}
+                    readOnly={currentItem.isPriceLocked}
+                    className="input input-bordered join-item w-full"
+                    style={{
+                      backgroundColor: currentItem.isPriceLocked
+                        ? "hsl(var(--b2))"
+                        : "hsl(var(--b1))",
+                    }}
+                  />
+                  {currentItem.isPriceLocked && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCurrentItem((prev) => ({
+                          ...prev,
+                          isPriceLocked: false,
+                        }))
+                      }
+                      className="btn join-item"
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="text-right mt-4">
+              <button
+                type="button"
+                onClick={handleAddItem}
+                className="btn btn-secondary btn-sm"
+                disabled={
+                  !currentItem.masterMaterialId || !currentItem.quantity
+                }
+              >
+                Add Item
+              </button>
+            </div>
+          </fieldset>
+
+          {billItems.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="table table-zebra w-full">
+                <thead>
+                  <tr>
+                    <th>Material</th>
+                    <th>Qty</th>
+                    <th>Unit</th>
+                    <th>Price</th>
+                    <th>Total</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {billItemsWithDetails.map((item, index) => (
+                    <tr key={index}>
+                      <td>{item.materialName}</td>
+                      <td>{item.quantity}</td>
+                      <td>{item.unit}</td>
+                      <td>{parseFloat(item.unitPrice).toFixed(2)}</td>
+                      <td>
+                        {(
+                          parseFloat(item.quantity) * parseFloat(item.unitPrice)
+                        ).toFixed(2)}
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(index)}
+                          className="btn btn-xs btn-ghost text-error"
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="card-actions justify-end mt-6">
+            <button
+              type="button"
+              onClick={() => navigate("/purchase-bills")}
+              className="btn btn-ghost"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={
+                !isHeaderSelected ||
+                billItems.length === 0 ||
+                createStatus === "loading"
+              }
+            >
+              {createStatus === "loading" ? (
+                <>
+                  <span className="loading loading-spinner"></span> Saving...
+                </>
+              ) : (
+                "Save Purchase Bill"
+              )}
+            </button>
+          </div>
+          {createStatus === "failed" && (
+            <div role="alert" className="alert alert-error mt-4">
+              <div>
+                <span>Error: {createError}</span>
+              </div>
+            </div>
+          )}
+        </form>
+      </div>
     </div>
   );
 }

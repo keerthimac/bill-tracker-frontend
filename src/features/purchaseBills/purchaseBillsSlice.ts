@@ -8,16 +8,20 @@ import type { RootState } from "../../app/store";
 // --- Helper Interfaces (matching your DTO structures for frontend state) ---
 // These can be refined or imported from a central types file later
 
-interface ItemCategory_Ref {
-  // For referencing within BillItem
+export interface ItemCategory_Ref {
   id: number;
   name: string;
 }
 
 export interface BillItem_Ref {
-  id: number; // This is the BillItem's own ID from the backend
-  materialName: string;
-  itemCategory: ItemCategory_Ref; // Nested simplified category
+  // This matches BillItemResponseDTO
+  id: number;
+  // These fields will come from the backend based on the new structure
+  masterMaterialId: number;
+  masterMaterialCode?: string;
+  masterMaterialName: string;
+  itemCategoryName: string; // This is now a simple string derived by the backend
+
   quantity: number;
   unit: string;
   unitPrice: number;
@@ -42,41 +46,40 @@ interface Supplier_Ref {
 
 // Main PurchaseBill interface for state (matching PurchaseBillResponseDTO from backend)
 export interface PurchaseBill {
-  // Exporting this as it might be used by components
+  // ... (fields remain the same, but the structure of billItems inside will use the updated BillItem_Ref above)
   id: number;
   billNumber: string;
-  billDate: string; // Keep as string if backend sends ISO date string
+  billDate: string;
   supplier: Supplier_Ref;
   site: Site_Ref;
   billImagePath?: string;
-  overallGrnStatus: string; // Or an enum type if you define one on frontend
+  overallGrnStatus: string;
   grnHardcopyReceivedByPurchaser: boolean;
   grnHardcopyHandedToAccountant: boolean;
   totalAmount: number;
-  createdAt: string; // Keep as string if backend sends ISO datetime string
+  createdAt: string;
   updatedAt: string;
-  billItems: BillItem_Ref[];
+  billItems: BillItem_Ref[]; // This now uses the updated BillItem_Ref
 }
 
 // --- Interfaces for API Payloads ---
 
-// For creating a new bill item (part of NewPurchaseBillData)
-interface NewBillItemData {
-  materialName: string;
-  itemCategoryId: number;
+// For creating a new bill item (This is the key change for the request)
+export interface NewBillItemData {
+  // <<< UPDATED
+  masterMaterialId: number; // Changed from materialName and itemCategoryId
   quantity: number;
   unit: string;
   unitPrice: number;
 }
 
-// For creating a new purchase bill (matches PurchaseBillRequestDTO from backend)
+// For creating a new purchase bill (This now uses the updated NewBillItemData)
 export interface NewPurchaseBillData {
-  // Exporting this as the form will use it
   billNumber: string;
-  billDate: string; // Expecting ISO date string e.g., "YYYY-MM-DD"
+  billDate: string;
   supplierId: number;
   siteId: number;
-  items: NewBillItemData[];
+  items: NewBillItemData[]; // <<< This now holds a list of the new item structure
 }
 
 // --- State Definition ---
