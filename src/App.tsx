@@ -1,79 +1,58 @@
-import React from "react";
-import { Routes, Route, Link } from "react-router-dom";
-import "./App.css";
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAppSelector } from './app/hooks';
+import { selectIsLoggedIn, selectCurrentUser } from './features/auth/authSlice';
 
-// Import the new layout and all your existing pages
-import DashboardLayout from "./components/layout/DashboardLayout";
-import HomePage from "./pages/HomePage";
-import SitesPage from "./pages/SitesPage";
-import ItemCategoriesPage from "./pages/ItemCategoriesPage";
-import SuppliersPage from "./pages/SuppliersPage";
-import BrandsPage from "./pages/BrandsPage";
-import MasterMaterialsPage from "./pages/MasterMaterialsPage";
-import AddMasterMaterialForm from "./features/masterMaterials/AddMasterMaterialForm";
-import PurchaseBillsPage from "./pages/PurchaseBillsPage";
-import AddPurchaseBillForm from "./features/purchaseBills/AddPurchaseBillForm";
-import PurchaseBillDetail from "./features/purchaseBills/PurchaseBillDetail";
+import DashboardLayout from './components/layout/DashboardLayout';
+import LoginPage from './pages/LoginPage';
+// Import all your existing pages
+import HomePage from './pages/HomePage';
+import SitesPage from './pages/SitesPage';
+import ItemCategoriesPage from './pages/ItemCategoriesPage';
+import SuppliersPage from './pages/SuppliersPage';
+import BrandsPage from './pages/BrandsPage';
+import MasterMaterialsPage from './pages/MasterMaterialsPage';
+import SupplierPricesPage from './pages/SupplierPricesPage';
+import PurchaseBillsPage from './pages/PurchaseBillsPage';
+import PurchaseBillDetail from './features/purchaseBills/PurchaseBillDetail';
+import AddPurchaseBillForm from './features/purchaseBills/AddPurchaseBillForm';
 
-// Edit form imports
-import EditSiteForm from "./features/sites/EditSiteForm";
-import EditItemCategoryForm from "./features/itemCategories/EditItemCategoryForm";
-import EditSupplierForm from "./features/suppliers/EditSupplierForm";
-import EditMasterMaterialForm from "./features/masterMaterials/EditMasterMaterialForm";
-import SupplierPricesPage from "./pages/SupplierPricesPage";
+// A component to protect routes
+const ProtectedRoute = () => {
+  const isLoggedIn = useAppSelector(selectIsLoggedIn);
+  return isLoggedIn ? <DashboardLayout /> : <Navigate to="/login" replace />;
+};
 
 function App() {
+  const currentUser = useAppSelector(selectCurrentUser);
+
   return (
     <Routes>
-      <Route path="/" element={<DashboardLayout />}>
-        {/* All your pages are now children of the DashboardLayout */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/" element={<ProtectedRoute />}>
+        {/* All app routes are now children of the protected route */}
         <Route index element={<HomePage />} />
+        
+        {/* Example of role-based access for some routes */}
+        { (currentUser?.role === 'admin') && (
+            <>
+                <Route path="sites" element={<SitesPage />} />
+                <Route path="item-categories" element={<ItemCategoriesPage />} />
+                <Route path="brands" element={<BrandsPage />} />
+                <Route path="supplier-prices" element={<SupplierPricesPage />} />
+            </>
+        )}
 
-        <Route path="sites" element={<SitesPage />} />
-        <Route path="sites/edit/:siteId" element={<EditSiteForm />} />
-
-        <Route path="item-categories" element={<ItemCategoriesPage />} />
-        <Route
-          path="item-categories/edit/:categoryId"
-          element={<EditItemCategoryForm />}
-        />
-
+        {/* Routes accessible by all logged-in users in this example */}
         <Route path="suppliers" element={<SuppliersPage />} />
-        <Route
-          path="suppliers/edit/:supplierId"
-          element={<EditSupplierForm />}
-        />
-
-        <Route path="brands" element={<BrandsPage />} />
-        {/* We will add routes for add/edit Brands next */}
-
         <Route path="master-materials" element={<MasterMaterialsPage />} />
-        <Route
-          path="master-materials/add"
-          element={<AddMasterMaterialForm />}
-        />
-        <Route
-          path="master-materials/edit/:materialId"
-          element={<EditMasterMaterialForm />}
-        />
-
-        <Route path="supplier-prices" element={<SupplierPricesPage />} />
-
         <Route path="purchase-bills" element={<PurchaseBillsPage />} />
         <Route path="purchase-bills/add" element={<AddPurchaseBillForm />} />
         <Route path="purchase-bills/:billId" element={<PurchaseBillDetail />} />
 
-        {/* Catch-all 404 Page */}
-        <Route
-          path="*"
-          element={
-            <div>
-              <h2>Page Not Found</h2>
-              <Link to="/">Go Home</Link>
-            </div>
-          }
-        />
       </Route>
+      {/* Fallback route */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

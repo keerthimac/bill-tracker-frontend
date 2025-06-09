@@ -6,9 +6,11 @@ import purchaseBillsReducer from "../features/purchaseBills/purchaseBillsSlice";
 import masterMaterialsReducer from "../features/masterMaterials/masterMaterialsSlice";
 import brandsReducer from "../features/brands/brandsSlice"; // <<< IMPORT THE BRANDS REDUCER
 import supplierPricesReducer from "../features/supplierPrices/supplierPricesSlice"; // <<< IMPORT THE SUPPLIER PRICES REDUCER
+import authReducer from "../features/auth/authSlice"; // <<< IMPORT THE AUTH REDUCER
 
 export const store = configureStore({
   reducer: {
+    auth: authReducer,
     sites: sitesReducer,
     itemCategories: itemCategoriesReducer,
     suppliers: suppliersReducer,

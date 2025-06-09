@@ -1,0 +1,13 @@
+@import "tailwindcss";
+@plugin "daisyui";
+@plugin "daisyui/theme" {
+  name: "light";
+  default: true;
+  /* A more standard, professional blue */
+  --color-primary: #3b82f6; /* This is like Tailwind's blue-500 */
+  --color-primary-focus: #2563eb; /* A slightly darker shade for hover/focus */
+
+  /* You can also define your secondary/accent colors here */
+  /* --color-secondary: #f97316; */
+  /* --color-accent: #10b981; */
+}
