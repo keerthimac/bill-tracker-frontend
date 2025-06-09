@@ -337,7 +337,8 @@ function AddPurchaseBillForm(): JSX.Element {
                   name="unit"
                   value={currentItem.unit}
                   onChange={handleCurrentItemChange}
-                  className="input input-bordered"
+                  className="input input-bordered input-disabled text-base-content/70" // <<< Added input-disabled
+                  readOnly // <<< ADD THIS ATTRIBUTE
                 />
               </div>
               <div className="form-control">
