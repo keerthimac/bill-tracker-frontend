@@ -1,4 +1,4 @@
-import React, { type JSX } from "react";
+import { type JSX } from "react";
 import { Link } from "react-router-dom";
 import PurchaseBillList from "../features/purchaseBills/PurchaseBillList";
 import { FiPlus } from "react-icons/fi";

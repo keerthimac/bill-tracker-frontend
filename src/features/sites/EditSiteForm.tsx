@@ -2,142 +2,155 @@ import React, { useState, useEffect, type JSX } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import {
-    updateSite,
-    selectSiteById, // To get the site data
-    selectUpdateSiteStatus,
-    selectUpdateSiteError,
-    resetUpdateSiteStatus, // Optional: to reset status
-    fetchSites, // To fetch all sites if the specific site isn't found and list is not loaded
-    selectSitesStatus
+  updateSite,
+  selectSiteById,
+  // Corrected: Using unified status selectors and actions
+  selectSiteOperationStatus,
+  selectSiteOperationError,
+  resetOperationStatus,
+  // Still needed for the initial data fetch
+  fetchSites,
+  selectSitesStatus,
 } from './sitesSlice';
-import type { RootState } from '../../app/store'; // To use with selectSiteById type
+import type { RootState } from '../../app/store';
 
-// Interface for the form data, similar to NewSiteData but id is handled by useParams
+// This interface is fine as is
 interface SiteFormData {
-    name: string;
-    location?: string;
+  name: string;
+  location: string; // Changed to non-optional for easier state management
 }
 
 function EditSiteForm(): JSX.Element {
-    const { siteId } = useParams<{ siteId: string }>(); // Get siteId from URL
-    const navigate = useNavigate();
-    const dispatch = useAppDispatch();
+  const { siteId } = useParams<{ siteId: string }>();
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
 
-    // Convert siteId to number, handle potential undefined case
-    const numericSiteId = siteId ? parseInt(siteId, 10) : undefined;
+  // --- State and Selectors ---
+  const numericSiteId = siteId ? parseInt(siteId, 10) : undefined;
 
-    // Select the site from the Redux store
-    // Note: The state passed to selectSiteById is the RootState, and then the siteId
-    const siteToEdit = useAppSelector((state: RootState) =>
-        numericSiteId ? selectSiteById(state, numericSiteId) : undefined
-    );
-    
-    const sitesFetchStatus = useAppSelector(selectSitesStatus);
-    const updateStatus = useAppSelector(selectUpdateSiteStatus);
-    const updateError = useAppSelector(selectUpdateSiteError);
+  // Select the specific site from the store
+  const siteToEdit = useAppSelector((state: RootState) =>
+    numericSiteId ? selectSiteById(state, numericSiteId) : undefined
+  );
+  
+  // Select status for the list fetch and the CUD operations
+  const sitesFetchStatus = useAppSelector(selectSitesStatus);
+  const operationStatus = useAppSelector(selectSiteOperationStatus);
+  const operationError = useAppSelector(selectSiteOperationError);
 
-    const [formData, setFormData] = useState<SiteFormData>({ name: '', location: '' });
-    const [initialLoad, setInitialLoad] = useState(true); // To prevent premature "not found"
+  // Local form state
+  const [formData, setFormData] = useState<SiteFormData>({ name: '', location: '' });
 
-    useEffect(() => {
-        // If sites haven't been fetched yet, and we are trying to edit, fetch them.
-        // This handles direct navigation to the edit page.
-        if (sitesFetchStatus === 'idle' && numericSiteId) {
-            dispatch(fetchSites());
-        }
+  // --- Effects ---
 
-        // Once siteToEdit is available (either from already fetched list or after fetchSites)
-        if (siteToEdit) {
-            setFormData({
-                name: siteToEdit.name,
-                location: siteToEdit.location || '',
-            });
-            setInitialLoad(false);
-        } else if (sitesFetchStatus === 'succeeded' && !siteToEdit && numericSiteId) {
-            // Sites fetched, but this specific site ID not found in the list
-            console.error("Site not found for editing!");
-            setInitialLoad(false); 
-            // Optionally navigate away or show a more prominent "not found" message
-        }
-    }, [siteToEdit, sitesFetchStatus, numericSiteId, dispatch]);
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value,
-        });
-    };
-
-    const canSave = formData.name.trim() !== '' && updateStatus !== 'loading';
-
-    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (canSave && numericSiteId && siteToEdit) { // Ensure siteToEdit and numericSiteId are valid
-            try {
-                await dispatch(updateSite({ id: numericSiteId, ...formData })).unwrap();
-                // Reset status and navigate back on success
-                dispatch(resetUpdateSiteStatus()); // Optional: if you want to clear status immediately
-                navigate('/sites'); // Navigate back to the sites list
-            } catch (err: any) {
-                console.error('Failed to update the site: ', err);
-                // Error is already in updateError from the slice
-            }
-        }
-    };
-
-    // Handle cases where siteId is invalid or site not found after initial attempts
-    if (initialLoad && sitesFetchStatus === 'loading') {
-        return <p>Loading site data...</p>;
-    }
-    
-    if (!numericSiteId || (!siteToEdit && !initialLoad && sitesFetchStatus !== 'loading')) {
-        return (
-            <div>
-                <h2>Edit Site</h2>
-                <p>Site not found. It might have been deleted or the ID is incorrect.</p>
-                <button onClick={() => navigate('/sites')}>Go to Sites List</button>
-            </div>
-        );
+  // Effect to fetch sites if needed and populate the form
+  useEffect(() => {
+    // If we don't have the site data, and the sites haven't been fetched yet,
+    // dispatch the fetch action. This handles direct navigation to the edit page.
+    if (!siteToEdit && sitesFetchStatus === 'idle' && numericSiteId) {
+      dispatch(fetchSites());
     }
 
+    // When the site data becomes available, populate the form
+    if (siteToEdit) {
+      setFormData({
+        name: siteToEdit.name,
+        location: siteToEdit.location || '', // Ensure location is always a string
+      });
+    }
+  }, [siteToEdit, sitesFetchStatus, numericSiteId, dispatch]);
 
+  // Effect to reset the operation status when the component unmounts
+  useEffect(() => {
+    return () => {
+      dispatch(resetOperationStatus());
+    };
+  }, [dispatch]);
+
+
+  // --- Event Handlers ---
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const canSave = formData.name.trim() !== '' && operationStatus !== 'loading';
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (canSave && numericSiteId) {
+      try {
+        await dispatch(updateSite({ id: numericSiteId, ...formData })).unwrap();
+        // On success, navigate back to the list. The cleanup effect will reset the status.
+        navigate('/sites');
+      } catch (err) {
+        console.error('Failed to update the site:', err);
+        // The UI will display the operationError from the Redux state
+      }
+    }
+  };
+
+
+  // --- Render Logic ---
+
+  // Show loading indicator while the initial site data is being fetched
+  if (sitesFetchStatus === 'loading') {
+    return <p>Loading site data...</p>;
+  }
+  
+  // Show "Not Found" message if the fetch succeeded but the site doesn't exist.
+  // This is a robust way to handle invalid IDs.
+  if (sitesFetchStatus === 'succeeded' && !siteToEdit) {
     return (
-        <div>
-            <h2>Edit Site (ID: {numericSiteId})</h2>
-            <form onSubmit={handleSubmit}>
-                <div>
-                    <label htmlFor="siteName">Site Name:</label>
-                    <input
-                        type="text"
-                        id="siteName"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        required
-                    />
-                </div>
-                <div>
-                    <label htmlFor="siteLocation">Location:</label>
-                    <input
-                        type="text"
-                        id="siteLocation"
-                        name="location"
-                        value={formData.location}
-                        onChange={handleChange}
-                    />
-                </div>
-                <button type="submit" disabled={!canSave}>
-                    {updateStatus === 'loading' ? 'Saving...' : 'Update Site'}
-                </button>
-                <button type="button" onClick={() => navigate('/sites')} style={{ marginLeft: '10px' }} disabled={updateStatus === 'loading'}>
-                    Cancel
-                </button>
-                {updateStatus === 'failed' && updateError && (
-                    <p style={{ color: 'red' }}>Error: {updateError}</p>
-                )}
-            </form>
-        </div>
+      <div>
+        <h2>Site Not Found</h2>
+        <p>The site you are trying to edit could not be found.</p>
+        <button onClick={() => navigate('/sites')}>Return to List</button>
+      </div>
     );
+  }
+
+  // Render the form once the site data is available
+  return (
+    <div>
+      <h2>Edit Site</h2>
+      <form onSubmit={handleSubmit}>
+        <div>
+          <label htmlFor="name">Site Name:</label>
+          <input
+            type="text"
+            id="name"
+            name="name" // The 'name' attribute must match the key in the formData state
+            value={formData.name}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div>
+          <label htmlFor="location">Location:</label>
+          <input
+            type="text"
+            id="location"
+            name="location" // The 'name' attribute must match the key in the formData state
+            value={formData.location}
+            onChange={handleChange}
+          />
+        </div>
+        <button type="submit" disabled={!canSave}>
+          {operationStatus === 'loading' ? 'Saving...' : 'Update Site'}
+        </button>
+        <button type="button" onClick={() => navigate('/sites')} style={{ marginLeft: '10px' }} disabled={operationStatus === 'loading'}>
+          Cancel
+        </button>
+        {operationStatus === 'failed' && operationError && (
+          <p style={{ color: 'red' }}>Error: {operationError}</p>
+        )}
+      </form>
+    </div>
+  );
 }
 
 export default EditSiteForm;

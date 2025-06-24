@@ -34,7 +34,7 @@ function BrandsPage(): JSX.Element {
   const modalRef = useRef<HTMLDialogElement>(null); // Ref for the daisyUI modal
 
   // --- Local State ---
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // The 'isModalOpen' state was removed as it was not being used.
   const [brandToEdit, setBrandToEdit] = useState<Brand | null>(null);
   const [formData, setFormData] = useState<BrandFormData>(initialFormData);
 
@@ -62,12 +62,10 @@ function BrandsPage(): JSX.Element {
 
   // --- Modal and Form Handlers ---
   const openModal = () => {
-    setIsModalOpen(true);
     modalRef.current?.showModal();
   };
 
   const closeModal = () => {
-    setIsModalOpen(false);
     modalRef.current?.close();
   };
 
@@ -148,7 +146,6 @@ function BrandsPage(): JSX.Element {
                 <td>
                   <div className="flex items-center gap-3">
                     <div className="avatar">
-                      {/* We will add the image here later once upload is done */}
                       {/* <div className="mask mask-squircle w-12 h-12"> <img src={brand.brandImagePath} alt={brand.name} /> </div> */}
                     </div>
                     <div>

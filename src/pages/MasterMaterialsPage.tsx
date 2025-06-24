@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, type JSX } from "react";
+import React, { useState, useEffect,  type JSX } from "react";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 
 // --- Redux Imports ---

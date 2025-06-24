@@ -1,4 +1,4 @@
-import React, { useEffect, type JSX } from 'react';
+import { useEffect, type JSX } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { loginUser, selectIsLoggedIn, selectAuthIsLoading, selectAuthError, clearAuthError } from '../features/auth/authSlice';

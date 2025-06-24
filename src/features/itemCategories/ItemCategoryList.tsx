@@ -6,21 +6,32 @@ import {
   selectAllItemCategories,
   selectItemCategoriesStatus,
   selectItemCategoriesError,
-  deleteItemCategory, // <<< IMPORT deleteItemCategory thunk
+  deleteItemCategory,
+  // Corrected: Import the unified status selectors for operations
+  selectItemCategoryOperationStatus,
+  selectItemCategoryOperationError,
 } from "./itemCategoriesSlice";
 
 function ItemCategoryList(): JSX.Element {
   const dispatch = useAppDispatch();
-  const categories = useAppSelector(selectAllItemCategories);
-  const status = useAppSelector(selectItemCategoriesStatus);
-  const error = useAppSelector(selectItemCategoriesError);
 
+  // --- Redux State ---
+  const categories = useAppSelector(selectAllItemCategories);
+  const fetchStatus = useAppSelector(selectItemCategoriesStatus);
+  const fetchError = useAppSelector(selectItemCategoriesError);
+  
+  // Use the unified status for CUD operations to provide UI feedback
+  const operationStatus = useAppSelector(selectItemCategoryOperationStatus);
+  const operationError = useAppSelector(selectItemCategoryOperationError);
+
+  // --- Effects ---
   useEffect(() => {
-    if (status === "idle") {
+    if (fetchStatus === "idle") {
       dispatch(fetchItemCategories());
     }
-  }, [status, dispatch]);
+  }, [fetchStatus, dispatch]);
 
+  // --- Event Handlers ---
   const handleDeleteCategory = (categoryId: number, categoryName: string) => {
     if (
       window.confirm(
@@ -30,15 +41,17 @@ function ItemCategoryList(): JSX.Element {
       dispatch(deleteItemCategory(categoryId))
         .unwrap()
         .catch((err) => {
-          alert(`Error deleting category: ${err.message || "Unknown error"}`);
+          console.error("Failed to delete category:", err);
+          // The UI will display the `operationError` from the Redux state.
         });
     }
   };
 
+  // --- Render Logic ---
   let content;
-  if (status === "loading") {
+  if (fetchStatus === "loading") {
     content = <p>"Loading item categories..."</p>;
-  } else if (status === "succeeded") {
+  } else if (fetchStatus === "succeeded") {
     if (categories.length === 0) {
       content = <p>No item categories found.</p>;
     } else {
@@ -52,8 +65,11 @@ function ItemCategoryList(): JSX.Element {
                 justifyContent: "space-between",
                 alignItems: "center",
                 marginBottom: "10px",
-                paddingBottom: "5px",
-                borderBottom: "1px solid #eee",
+                padding: "10px",
+                border: "1px solid #eee",
+                borderRadius: "4px",
+                // Visually indicate when the list is being processed
+                opacity: operationStatus === "loading" ? 0.6 : 1,
               }}
             >
               <span>{category.name}</span>
@@ -64,6 +80,8 @@ function ItemCategoryList(): JSX.Element {
                     marginRight: "10px",
                     textDecoration: "none",
                     color: "blue",
+                    // Prevent navigation while an operation is in progress
+                    pointerEvents: operationStatus === "loading" ? "none" : "auto",
                   }}
                 >
                   Edit
@@ -79,6 +97,7 @@ function ItemCategoryList(): JSX.Element {
                     padding: "3px 6px",
                     cursor: "pointer",
                   }}
+                  disabled={operationStatus === "loading"}
                 >
                   Delete
                 </button>
@@ -88,10 +107,25 @@ function ItemCategoryList(): JSX.Element {
         </ul>
       );
     }
-  } else if (status === "failed") {
-    content = <p>Error: {error}</p>;
+  } else if (fetchStatus === "failed") {
+    content = <p>Error: {fetchError}</p>;
   }
 
-  return <div>{content}</div>;
+  return (
+    <div>
+      <h2>Item Categories</h2>
+      {/* Display a global error message for failed operations like delete */}
+      {operationStatus === "failed" && operationError && (
+        <p style={{ color: "red", border: "1px solid red", padding: "10px" }}>
+          <strong>Operation Failed:</strong> {operationError}
+        </p>
+      )}
+      {/* Display a global loading message for CUD operations */}
+      {operationStatus === 'loading' && <p>Processing...</p>}
+
+      {content}
+    </div>
+  );
 }
+
 export default ItemCategoryList;

@@ -52,8 +52,8 @@ export const fetchSuppliers = createAsyncThunk<
 >("suppliers/fetchSuppliers", async (_, { rejectWithValue }) => {
   try {
     const response = await fetch(`${API_BASE_URL}/suppliers`);
+    if (response.status === 204) return []; // Handle no content
     if (!response.ok) {
-      if (response.status === 204) return [];
       return rejectWithValue("Failed to fetch suppliers.");
     }
     return await response.json();
@@ -151,7 +151,7 @@ const suppliersSlice = createSlice({
           } else if (typeof payload === "string") {
             state.operationError = payload;
           } else {
-            state.operationError = "An unknown error occurred.";
+            state.operationError = action.error.message || "An unknown error occurred.";
           }
         });
     });
@@ -214,3 +214,4 @@ export const selectSupplierOperationStatus = (state: RootState) =>
   state.suppliers.operationStatus;
 export const selectSupplierOperationError = (state: RootState) =>
   state.suppliers.operationError;
+export const selectSuppliersError = (state: RootState) => state.suppliers.error;

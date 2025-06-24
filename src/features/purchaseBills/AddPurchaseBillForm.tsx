@@ -35,7 +35,7 @@ interface CurrentBillItem {
   quantity: string;
   unit: string;
   unitPrice: string;
-  isPriceLocked: boolean; // For the editable price feature
+  isPriceLocked: boolean;
 }
 
 const initialBillItemState: CurrentBillItem = {
@@ -81,50 +81,59 @@ function AddPurchaseBillForm(): JSX.Element {
   }, [sitesStatus, suppliersStatus, masterMaterialsStatus, dispatch]);
 
   useEffect(() => {
-    const getPrice = async () => {
-      if (
-        isHeaderSelected &&
-        currentItem.masterMaterialId &&
-        currentItem.unit &&
-        billDate
-      ) {
-        try {
-          const activePrice = await fetchActivePrice({
-            supplierId: parseInt(selectedSupplierId),
-            masterMaterialId: parseInt(currentItem.masterMaterialId),
-            unit: currentItem.unit,
-            date: billDate,
-          });
-          if (activePrice) {
-            setCurrentItem((prev) => ({
-              ...prev,
-              unitPrice: String(activePrice.price),
-              isPriceLocked: true,
-            }));
-          } else {
-            setCurrentItem((prev) => ({
-              ...prev,
-              unitPrice: "",
-              isPriceLocked: false,
-            }));
-          }
-        } catch (error) {
-          console.warn("Could not fetch active price:", error);
-          setCurrentItem((prev) => ({ ...prev, isPriceLocked: false }));
-        }
-      }
+    return () => {
+      dispatch(resetCreatePurchaseBillStatus());
     };
-    const handler = setTimeout(() => getPrice(), 300);
-    return () => clearTimeout(handler);
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (!currentItem.isPriceLocked) {
+      const getPrice = async () => {
+        if (
+          isHeaderSelected &&
+          currentItem.masterMaterialId &&
+          currentItem.unit &&
+          billDate
+        ) {
+          try {
+            const activePrice = await fetchActivePrice({
+              supplierId: parseInt(selectedSupplierId),
+              masterMaterialId: parseInt(currentItem.masterMaterialId),
+              unit: currentItem.unit,
+              date: billDate,
+            });
+            if (activePrice) {
+              setCurrentItem((prev) => ({
+                ...prev,
+                unitPrice: String(activePrice.price),
+                isPriceLocked: true,
+              }));
+            } else {
+              setCurrentItem((prev) => ({
+                ...prev,
+                unitPrice: "",
+                isPriceLocked: false,
+              }));
+            }
+          } catch (error) {
+            console.warn("Could not fetch active price:", error);
+            setCurrentItem((prev) => ({ ...prev, unitPrice: "", isPriceLocked: false }));
+          }
+        }
+      };
+      const handler = setTimeout(() => getPrice(), 300);
+      return () => clearTimeout(handler);
+    }
   }, [
     selectedSupplierId,
     currentItem.masterMaterialId,
     currentItem.unit,
     billDate,
     isHeaderSelected,
+    currentItem.isPriceLocked,
+    dispatch,
   ]);
-
-  // --- Memoized Data for Display ---
+  
   const billItemsWithDetails = useMemo(() => {
     return billItems.map((item) => {
       const material = masterMaterials.find(
@@ -139,24 +148,28 @@ function AddPurchaseBillForm(): JSX.Element {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    const isManualPriceEntry = name === "unitPrice";
-    setCurrentItem((prev) => ({
-      ...prev,
-      [name]: value,
-      isPriceLocked: isManualPriceEntry ? false : prev.isPriceLocked,
-    }));
 
-    if (name === "masterMaterialId" && value) {
-      const material = masterMaterials.find(
-        (m) => m.id === parseInt(value, 10)
-      );
-      if (material) {
-        setCurrentItem((prev) => ({
-          ...initialBillItemState,
-          masterMaterialId: value,
-          unit: material.defaultUnit,
-        }));
+    if (name === "masterMaterialId") {
+      if (value) {
+        const material = masterMaterials.find(
+          (m) => m.id === parseInt(value, 10)
+        );
+        if (material) {
+          setCurrentItem({
+            ...initialBillItemState,
+            masterMaterialId: value,
+            unit: material.defaultUnit,
+          });
+        }
+      } else {
+        setCurrentItem(initialBillItemState);
       }
+    } else {
+      setCurrentItem((prev) => ({
+        ...prev,
+        [name]: value,
+        isPriceLocked: name === "unitPrice" ? false : prev.isPriceLocked,
+      }));
     }
   };
 
@@ -337,8 +350,8 @@ function AddPurchaseBillForm(): JSX.Element {
                   name="unit"
                   value={currentItem.unit}
                   onChange={handleCurrentItemChange}
-                  className="input input-bordered input-disabled text-base-content/70" // <<< Added input-disabled
-                  readOnly // <<< ADD THIS ATTRIBUTE
+                  className="input input-bordered"
+                  readOnly
                 />
               </div>
               <div className="form-control">
@@ -410,10 +423,10 @@ function AddPurchaseBillForm(): JSX.Element {
                 <thead>
                   <tr>
                     <th>Material</th>
-                    <th>Qty</th>
+                    <th className="text-right">Qty</th>
                     <th>Unit</th>
-                    <th>Price</th>
-                    <th>Total</th>
+                    <th className="text-right">Price</th>
+                    <th className="text-right">Total</th>
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -421,10 +434,10 @@ function AddPurchaseBillForm(): JSX.Element {
                   {billItemsWithDetails.map((item, index) => (
                     <tr key={index}>
                       <td>{item.materialName}</td>
-                      <td>{item.quantity}</td>
+                      <td className="text-right">{item.quantity}</td>
                       <td>{item.unit}</td>
-                      <td>{parseFloat(item.unitPrice).toFixed(2)}</td>
-                      <td>
+                      <td className="text-right">{parseFloat(item.unitPrice).toFixed(2)}</td>
+                      <td className="text-right font-semibold">
                         {(
                           parseFloat(item.quantity) * parseFloat(item.unitPrice)
                         ).toFixed(2)}
@@ -450,6 +463,7 @@ function AddPurchaseBillForm(): JSX.Element {
               type="button"
               onClick={() => navigate("/purchase-bills")}
               className="btn btn-ghost"
+              disabled={createStatus === "loading"}
             >
               Cancel
             </button>

@@ -1,4 +1,4 @@
-import React, { type JSX } from 'react';
+import { type JSX } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAppSelector } from '../../app/hooks';
 import { selectCurrentUser } from '../../features/auth/authSlice';
@@ -42,13 +42,24 @@ function Sidebar({ onLogout }: { onLogout: () => void }): JSX.Element {
             <li className="mb-4"><NavLink to="/" className="text-xl font-bold p-2 hover:bg-transparent flex items-center gap-2"><img src={logoUrl} alt="Logo" className="h-8 w-auto" /><span>Bill Tracker</span></NavLink></li>
             {currentUser && <li className="menu-title text-xs px-4"><span>{currentUser.displayName} ({currentUser.role})</span></li>}
             
-            {navigationItems.map((item, index) => (
-                item.group 
-                    ? <li key={`group-${index}`} className="menu-title mt-4"><span>{item.group}</span></li>
-                    : <li key={item.label}><NavLink to={item.path} className={getNavLinkClass} end={item.path === '/'}><span className="text-lg">{item.icon}</span>{item.label}</NavLink></li>
-            ))}
+            {/* CORRECTED: Using a more robust type guard with the 'in' operator */}
+            {navigationItems.map((item, index) => {
+                // Check for the *presence* of the 'group' key.
+                if ('group' in item) {
+                    return <li key={`group-${index}`} className="menu-title mt-4"><span>{item.group}</span></li>;
+                }
+                // If the 'group' key is not present, it must be a NavLink item.
+                return (
+                    <li key={item.label}>
+                        <NavLink to={item.path} className={getNavLinkClass} end={item.path === '/'}>
+                            <span className="text-lg">{item.icon}</span>
+                            {item.label}
+                        </NavLink>
+                    </li>
+                );
+            })}
 
-            <li className="mt-auto"><button onClick={onLogout} className="btn btn-error btn-sm"><FiLogOut className="mr-2"/>Log Out</button></li>
+            <li className="mt-auto"><button onClick={onLogout} className="btn btn-error btn-sm w-full"><FiLogOut className="mr-2"/>Log Out</button></li>
         </ul>
     );
 }

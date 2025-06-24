@@ -1,4 +1,4 @@
-import React, { useEffect, type JSX } from "react";
+import { useEffect, type JSX } from "react";
 import { Link } from "react-router-dom";
 import { useAppSelector, useAppDispatch } from "../../app/hooks";
 import {

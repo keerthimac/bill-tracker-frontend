@@ -1,4 +1,4 @@
-import React, { type JSX } from 'react';
+import { type JSX } from 'react';
 import { FiMenu, FiBell, FiUser } from 'react-icons/fi';
 import { useAppSelector } from '../../app/hooks';
 import { selectCurrentUser } from '../../features/auth/authSlice';

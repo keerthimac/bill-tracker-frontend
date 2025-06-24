@@ -6,25 +6,37 @@ import {
   selectAllSites,
   selectSitesStatus,
   selectSitesError,
-  deleteSite, // <<< IMPORT deleteSite thunk
+  deleteSite,
+  // Corrected: Import the unified status selectors for operations
+  selectSiteOperationStatus,
+  selectSiteOperationError,
 } from "./sitesSlice";
 
 function SiteList(): JSX.Element {
   const dispatch = useAppDispatch();
-  const sites = useAppSelector(selectAllSites);
-  const sitesStatus = useAppSelector(selectSitesStatus);
-  const error = useAppSelector(selectSitesError);
-  // Optionally, you can select deleteStatus and deleteError if you want to show specific feedback
-  // const deleteStatus = useAppSelector(selectDeleteSiteStatus); // Assuming you add these selectors
-  // const deleteError = useAppSelector(selectDeleteSiteError); // Assuming you add these selectors
 
+  // --- Redux State ---
+  const sites = useAppSelector(selectAllSites);
+  const sitesFetchStatus = useAppSelector(selectSitesStatus);
+  const fetchError = useAppSelector(selectSitesError);
+  
+  // Use the unified status for delete operations to provide UI feedback
+  const operationStatus = useAppSelector(selectSiteOperationStatus);
+  const operationError = useAppSelector(selectSiteOperationError);
+
+  // --- Effects ---
+
+  // Effect to fetch the list of sites if it hasn't been fetched yet
   useEffect(() => {
-    if (sitesStatus === "idle") {
+    if (sitesFetchStatus === "idle") {
       dispatch(fetchSites());
     }
-  }, [sitesStatus, dispatch]);
+  }, [sitesFetchStatus, dispatch]);
+
+  // --- Event Handlers ---
 
   const handleDeleteSite = (siteId: number, siteName: string) => {
+    // Confirm before dispatching the delete action
     if (
       window.confirm(
         `Are you sure you want to delete the site "${siteName}"? This action cannot be undone.`
@@ -33,20 +45,22 @@ function SiteList(): JSX.Element {
       dispatch(deleteSite(siteId))
         .unwrap()
         .catch((err) => {
-          // The slice already logs this, but you can add specific UI error handling here if needed
-          console.error("Failed to delete site from component:", err);
-          alert(`Error deleting site: ${err.message || "Unknown error"}`);
+          // The slice will set the error state. We can log it here for debugging.
+          console.error("Failed to delete the site from component:", err);
+          // The UI will display the operationError from the Redux state, so an alert is not needed.
         });
     }
   };
 
+  // --- Render Logic ---
+
   let content;
 
-  if (sitesStatus === "loading") {
+  if (sitesFetchStatus === "loading") {
     content = <p>"Loading sites..."</p>;
-  } else if (sitesStatus === "succeeded") {
+  } else if (sitesFetchStatus === "succeeded") {
     if (sites.length === 0) {
-      content = <p>No sites found.</p>;
+      content = <p>No sites found. Add one to get started!</p>;
     } else {
       content = (
         <ul style={{ listStyle: "none", paddingLeft: 0 }}>
@@ -58,13 +72,19 @@ function SiteList(): JSX.Element {
                 justifyContent: "space-between",
                 alignItems: "center",
                 marginBottom: "10px",
-                paddingBottom: "5px",
-                borderBottom: "1px solid #eee",
+                padding: "10px",
+                border: "1px solid #eee",
+                borderRadius: "4px",
+                // Visually indicate when an item is being processed
+                opacity: operationStatus === "loading" ? 0.6 : 1,
               }}
             >
               <span>
-                <strong>{site.name}</strong> (
-                {site.location || "No location specified"})
+                <strong>{site.name}</strong>
+                <br />
+                <small style={{ color: "#555" }}>
+                  {site.location || "No location specified"}
+                </small>
               </span>
               <span>
                 <Link
@@ -73,6 +93,8 @@ function SiteList(): JSX.Element {
                     marginRight: "10px",
                     textDecoration: "none",
                     color: "blue",
+                    // Prevent navigation while an operation is in progress
+                    pointerEvents: operationStatus === "loading" ? "none" : "auto",
                   }}
                 >
                   Edit
@@ -86,7 +108,8 @@ function SiteList(): JSX.Element {
                     padding: "3px 6px",
                     cursor: "pointer",
                   }}
-                  // disabled={deleteStatus === 'loading'} // If tracking delete status
+                  // Disable all delete buttons while any operation is loading
+                  disabled={operationStatus === "loading"}
                 >
                   Delete
                 </button>
@@ -96,13 +119,21 @@ function SiteList(): JSX.Element {
         </ul>
       );
     }
-  } else if (sitesStatus === "failed") {
-    content = <p>Error loading sites: {error}</p>;
+  } else if (sitesFetchStatus === "failed") {
+    content = <p>Error loading sites: {fetchError}</p>;
   }
 
   return (
     <div>
-      {/* Title might be better in SitesPage.tsx */}
+      {/* Display a global error message for failed operations like delete */}
+      {operationStatus === "failed" && operationError && (
+        <p style={{ color: "red", border: "1px solid red", padding: "10px" }}>
+          <strong>Operation Failed:</strong> {operationError}
+        </p>
+      )}
+      {/* Display a global loading message for CUD operations */}
+      {operationStatus === 'loading' && <p>Processing...</p>}
+      
       {content}
     </div>
   );

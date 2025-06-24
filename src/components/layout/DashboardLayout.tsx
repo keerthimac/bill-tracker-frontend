@@ -1,4 +1,4 @@
-import React, { type JSX } from 'react';
+import { type JSX } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAppDispatch } from '../../app/hooks';
 import Header from './Header';

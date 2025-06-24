@@ -6,21 +6,30 @@ import {
   selectAllSuppliers,
   selectSuppliersStatus,
   selectSuppliersError,
-  deleteSupplier, // <<< IMPORT deleteSupplier thunk
+  deleteSupplier,
+  selectSupplierOperationStatus,
+  selectSupplierOperationError,
 } from "./suppliersSlice";
 
 function SupplierList(): JSX.Element {
   const dispatch = useAppDispatch();
-  const suppliers = useAppSelector(selectAllSuppliers);
-  const status = useAppSelector(selectSuppliersStatus);
-  const error = useAppSelector(selectSuppliersError);
 
+  // --- Redux State ---
+  const suppliers = useAppSelector(selectAllSuppliers);
+  const fetchStatus = useAppSelector(selectSuppliersStatus);
+  const fetchError = useAppSelector(selectSuppliersError);
+
+  const operationStatus = useAppSelector(selectSupplierOperationStatus);
+  const operationError = useAppSelector(selectSupplierOperationError);
+
+  // --- Effects ---
   useEffect(() => {
-    if (status === "idle") {
+    if (fetchStatus === "idle") {
       dispatch(fetchSuppliers());
     }
-  }, [status, dispatch]);
+  }, [fetchStatus, dispatch]);
 
+  // --- Event Handlers ---
   const handleDeleteSupplier = (supplierId: number, supplierName: string) => {
     if (
       window.confirm(
@@ -30,17 +39,19 @@ function SupplierList(): JSX.Element {
       dispatch(deleteSupplier(supplierId))
         .unwrap()
         .catch((err) => {
-          alert(`Error deleting supplier: ${err.message || "Unknown error"}`);
+          console.error("Failed to delete the supplier from component:", err);
         });
     }
   };
 
+  // --- Render Logic ---
   let content;
-  if (status === "loading") {
+
+  if (fetchStatus === "loading") {
     content = <p>"Loading suppliers..."</p>;
-  } else if (status === "succeeded") {
+  } else if (fetchStatus === "succeeded") {
     if (suppliers.length === 0) {
-      content = <p>No suppliers found.</p>;
+      content = <p>No suppliers found. Add one to get started!</p>;
     } else {
       content = (
         <ul style={{ listStyle: "none", paddingLeft: 0 }}>
@@ -52,14 +63,18 @@ function SupplierList(): JSX.Element {
                 justifyContent: "space-between",
                 alignItems: "center",
                 marginBottom: "10px",
-                paddingBottom: "5px",
-                borderBottom: "1px solid #eee",
+                padding: "10px",
+                border: "1px solid #eee",
+                borderRadius: "4px",
+                opacity: operationStatus === "loading" ? 0.6 : 1,
               }}
             >
               <span>
                 <strong>{supplier.name}</strong>
-                {supplier.contactPerson &&
-                  ` (Contact: ${supplier.contactPerson})`}
+                <br />
+                <small style={{ color: "#555" }}>
+                  {supplier.contactPerson || "No contact person"}
+                </small>
               </span>
               <span>
                 <Link
@@ -68,14 +83,13 @@ function SupplierList(): JSX.Element {
                     marginRight: "10px",
                     textDecoration: "none",
                     color: "blue",
+                    pointerEvents: operationStatus === "loading" ? "none" : "auto",
                   }}
                 >
                   Edit
                 </Link>
                 <button
-                  onClick={() =>
-                    handleDeleteSupplier(supplier.id, supplier.name)
-                  }
+                  onClick={() => handleDeleteSupplier(supplier.id, supplier.name)}
                   style={{
                     color: "red",
                     background: "none",
@@ -83,6 +97,7 @@ function SupplierList(): JSX.Element {
                     padding: "3px 6px",
                     cursor: "pointer",
                   }}
+                  disabled={operationStatus === "loading"}
                 >
                   Delete
                 </button>
@@ -92,10 +107,23 @@ function SupplierList(): JSX.Element {
         </ul>
       );
     }
-  } else if (status === "failed") {
-    content = <p>Error: {error}</p>;
+  } else if (fetchStatus === "failed") {
+    content = <p>Error loading suppliers: {fetchError}</p>;
   }
 
-  return <div>{content}</div>;
+  return (
+    <div>
+      <h2>Suppliers</h2>
+      {operationStatus === "failed" && operationError && (
+        <p style={{ color: "red", border: "1px solid red", padding: "10px" }}>
+          <strong>Operation Failed:</strong> {operationError}
+        </p>
+      )}
+      {operationStatus === 'loading' && <p>Processing...</p>}
+      
+      {content}
+    </div>
+  );
 }
+
 export default SupplierList;

@@ -1,4 +1,4 @@
-import React, { useEffect, type JSX } from "react";
+import { useEffect, type JSX } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 
@@ -13,7 +13,7 @@ import {
   clearSelectedPurchaseBill,
   selectGrnItemUpdateStatus,
   selectGrnHeaderUpdateStatus,
-  type BillItem_Ref, // Assuming this type is exported from your slice
+  type BillItem_Ref,
 } from "./purchaseBillsSlice";
 
 // --- Icon Imports ---
@@ -25,7 +25,7 @@ function PurchaseBillDetail(): JSX.Element {
 
   // --- Redux Selectors ---
   const bill = useAppSelector(selectCurrentPurchaseBill);
-  const billFetchStatus = useAppSelector(selectCurrentPurchaseBillStatus);
+  const billFetchStatus = useAppSelector(selectCurrentPurchaseBillStatus); // This is now used
   const billFetchError = useAppSelector(selectCurrentPurchaseBillError);
   const grnItemUpdateInProgress =
     useAppSelector(selectGrnItemUpdateStatus) === "loading";
@@ -40,13 +40,12 @@ function PurchaseBillDetail(): JSX.Element {
         dispatch(fetchPurchaseBillById(numericBillId));
       }
     }
-    // Cleanup function to clear the selected bill when the component unmounts
     return () => {
       dispatch(clearSelectedPurchaseBill());
     };
   }, [billId, dispatch]);
 
-  // --- Event Handlers (no changes to logic) ---
+  // --- Event Handlers (Logic is correct, no changes needed) ---
   const handleGrnItemChange = (
     itemId: number,
     currentReceivedStatus: boolean
@@ -58,29 +57,34 @@ function PurchaseBillDetail(): JSX.Element {
   };
 
   const handleGrnHardcopyChange = (
-    // The field name corresponds to the property on the `bill` object
     field: "grnHardcopyReceivedByPurchaser" | "grnHardcopyHandedToAccountant",
     currentValue: boolean
   ) => {
     if (bill && !grnHeaderUpdateInProgress) {
-      // First, create a payload that matches the expected UpdateGrnHardcopyPayload
       const payload = {
         billId: bill.id,
         receivedByPurchaser: bill.grnHardcopyReceivedByPurchaser,
         handedToAccountant: bill.grnHardcopyHandedToAccountant,
       };
-
-      // Then, use an if/else if block to modify the correct property on the payload
       if (field === "grnHardcopyReceivedByPurchaser") {
         payload.receivedByPurchaser = !currentValue;
       } else if (field === "grnHardcopyHandedToAccountant") {
         payload.handedToAccountant = !currentValue;
       }
-
-      // Dispatch the correctly typed payload
       dispatch(updateGrnHardcopy(payload));
     }
   };
+
+  // --- Render Logic ---
+
+  // CORRECTED: Added this block to use the billFetchStatus variable
+  if (billFetchStatus === "loading") {
+    return (
+      <div className="flex justify-center items-center p-8">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
+    );
+  }
 
   if (billFetchError) {
     return (
@@ -92,6 +96,7 @@ function PurchaseBillDetail(): JSX.Element {
     );
   }
 
+  // Changed to an else-if to avoid showing "Not Found" during the initial loading state.
   if (!bill) {
     return (
       <div className="text-center p-8">
@@ -103,6 +108,7 @@ function PurchaseBillDetail(): JSX.Element {
     );
   }
 
+  // The rest of the component remains the same
   return (
     <div className="space-y-6">
       {/* Page Header */}

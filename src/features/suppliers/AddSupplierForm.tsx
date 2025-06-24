@@ -1,31 +1,42 @@
-import React, { useState, type JSX } from "react";
+import React, { useState, useEffect, type JSX } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import {
   createSupplier,
-  selectCreateSupplierStatus,
-  selectCreateSupplierError,
+  // Corrected: Using the unified status selectors and reset action from the slice
+  selectSupplierOperationStatus,
+  selectSupplierOperationError,
+  resetOperationStatus,
 } from "./suppliersSlice";
-
-interface NewSupplierData {
-  // Mirroring the slice's input type
-  name: string;
-  contactPerson?: string;
-  contactNumber?: string;
-  email?: string;
-  address?: string;
-}
+import type { NewSupplierData } from "./suppliersSlice"; // Good practice to import the type
 
 function AddSupplierForm(): JSX.Element {
   const dispatch = useAppDispatch();
-  const [formData, setFormData] = useState<NewSupplierData>({
+
+  // --- Component State ---
+  const initialFormState: NewSupplierData = {
     name: "",
     contactPerson: "",
     contactNumber: "",
     email: "",
     address: "",
-  });
-  const createStatus = useAppSelector(selectCreateSupplierStatus);
-  const createError = useAppSelector(selectCreateSupplierError);
+  };
+  const [formData, setFormData] = useState<NewSupplierData>(initialFormState);
+
+  // --- Redux State ---
+  // Corrected: Selecting the unified status and error from the Redux store
+  const operationStatus = useAppSelector(selectSupplierOperationStatus);
+  const operationError = useAppSelector(selectSupplierOperationError);
+
+  // --- Derived State & Event Handlers ---
+  const canSave = formData.name.trim() !== "";
+
+  // Effect to reset the operation status when the component unmounts.
+  // This prevents showing a stale "Success" or "Error" message if the user re-visits the form.
+  useEffect(() => {
+    return () => {
+      dispatch(resetOperationStatus());
+    };
+  }, [dispatch]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -33,31 +44,29 @@ function AddSupplierForm(): JSX.Element {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const canSave = formData.name.trim() !== "";
-
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (canSave) {
       try {
         await dispatch(createSupplier(formData)).unwrap();
-        setFormData({
-          name: "",
-          contactPerson: "",
-          contactNumber: "",
-          email: "",
-          address: "",
-        }); // Clear form
-        // alert('Supplier created successfully!');
+        // --- Success Case ---
+        setFormData(initialFormState); // Clear form fields
+        // The operationStatus is now 'succeeded', which will show the success message.
+        // The useEffect cleanup hook will handle resetting the status later.
       } catch (err) {
+        // --- Error Case ---
         console.error("Failed to save the supplier: ", err);
+        // The UI will automatically display the `operationError` from the Redux state.
       }
     }
   };
 
+  // --- Render Logic ---
   return (
     <div>
       <h3>Add New Supplier</h3>
       <form onSubmit={handleSubmit}>
+        {/* Input fields for supplier data */}
         <div>
           <label htmlFor="supplierName">Supplier Name:</label>
           <input
@@ -108,11 +117,20 @@ function AddSupplierForm(): JSX.Element {
             onChange={handleChange}
           />
         </div>
-        <button type="submit" disabled={!canSave || createStatus === "loading"}>
-          {createStatus === "loading" ? "Saving..." : "Add Supplier"}
+
+        <button
+          type="submit"
+          disabled={!canSave || operationStatus === "loading"}
+        >
+          {operationStatus === "loading" ? "Saving..." : "Add Supplier"}
         </button>
-        {createStatus === "failed" && createError && (
-          <p style={{ color: "red" }}>Error: {createError}</p>
+
+        {/* --- Feedback Messages --- */}
+        {operationStatus === "succeeded" && (
+          <p style={{ color: "green" }}>Supplier added successfully!</p>
+        )}
+        {operationStatus === "failed" && operationError && (
+          <p style={{ color: "red" }}>Error: {operationError}</p>
         )}
       </form>
     </div>

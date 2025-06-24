@@ -2,59 +2,62 @@ import React, { useState, useEffect, type JSX } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import {
   createSite,
-  selectCreateSiteStatus,
-  selectCreateSiteError,
-  resetCreateSiteStatus,
-} from "./sitesSlice"; // Assuming NewSiteData is defined in sitesSlice or imported separately
-
-// If NewSiteData is not exported from sitesSlice, you might need to define it here or import it.
-// For simplicity, let's assume it's implicitly handled or you'd define:
-// interface NewSiteData { name: string; location?: string; }
+  // Corrected: Using the unified status selectors from the slice
+  selectSiteOperationStatus,
+  selectSiteOperationError,
+  // Corrected: Using the unified reset action
+  resetOperationStatus,
+} from "./sitesSlice";
+import type { NewSiteData } from "./sitesSlice";
 
 function AddSiteForm(): JSX.Element {
   const dispatch = useAppDispatch();
 
+  // --- Component State ---
   const [name, setName] = useState<string>("");
   const [location, setLocation] = useState<string>("");
 
-  const createStatus = useAppSelector(selectCreateSiteStatus);
-  const createError = useAppSelector(selectCreateSiteError);
+  // --- Redux State ---
+  // Corrected: Selecting the unified status and error from the Redux store
+  const operationStatus = useAppSelector(selectSiteOperationStatus);
+  const operationError = useAppSelector(selectSiteOperationError);
 
-  const canSave = name.trim() !== ""; // Basic client-side check
+  // --- Derived State & Event Handlers ---
+  const canSave = name.trim() !== "";
+
+  // Effect to reset the operation status when the component unmounts
+  // This prevents showing stale "Success" or "Error" messages if the user navigates away and back
+  useEffect(() => {
+    return () => {
+      dispatch(resetOperationStatus());
+    };
+  }, [dispatch]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (canSave) {
       try {
-        // The type for createSite thunk argument is NewSiteData
-        // { name: string, location?: string }
-        await dispatch(createSite({ name, location })).unwrap(); // .unwrap() will throw error if rejected
-        // Clear form on success
+        // The data to be sent, conforming to the NewSiteData interface
+        const newSite: NewSiteData = { name, location };
+
+        await dispatch(createSite(newSite)).unwrap();
+
+        // --- Success Case ---
+        // Clear the form fields after a successful submission
         setName("");
         setLocation("");
-        // Optionally dispatch resetCreateSiteStatus after a short delay or based on user action
-        // dispatch(resetCreateSiteStatus());
-        // alert('Site created successfully!'); // Or use a more sophisticated notification
+        // Note: We don't need to dispatch reset here because the success message
+        // is useful. The useEffect cleanup will handle resetting when leaving the page.
       } catch (err: any) {
-        // Error is already handled by the slice and set in createError
-        // unwrap() re-throws the error payload from rejectWithValue or a generic error
+        // --- Error Case ---
+        // The .unwrap() utility re-throws the error from the rejected thunk
         console.error("Failed to save the site: ", err);
-        // The createError from the slice will be displayed below
+        // The UI will display the `operationError` from the Redux state
       }
     }
   };
 
-  // Effect to reset status when component unmounts or on success/failure if needed
-  useEffect(() => {
-    // Optionally reset status when form is shown again after a submission attempt
-    // This ensures that if the user navigates away and back, or after an error,
-    // the form isn't stuck in a 'failed' or 'succeeded' state visually
-    // if createStatus === 'failed' or createStatus === 'succeeded'
-    // return () => {
-    // dispatch(resetCreateSiteStatus());
-    // }
-  }, [dispatch, createStatus]);
-
+  // --- Render Logic ---
   return (
     <div>
       <h3>Add New Site</h3>
@@ -67,7 +70,7 @@ function AddSiteForm(): JSX.Element {
             name="siteName"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            required // HTML5 validation
+            required // Use browser-based validation for the required field
           />
         </div>
         <div>
@@ -80,13 +83,20 @@ function AddSiteForm(): JSX.Element {
             onChange={(e) => setLocation(e.target.value)}
           />
         </div>
-        <button type="submit" disabled={!canSave || createStatus === "loading"}>
-          {createStatus === "loading" ? "Saving..." : "Add Site"}
+        <button
+          type="submit"
+          disabled={!canSave || operationStatus === "loading"}
+        >
+          {operationStatus === "loading" ? "Saving..." : "Add Site"}
         </button>
-        {createStatus === "failed" && createError && (
-          <p style={{ color: "red" }}>Error: {createError}</p>
+
+        {/* --- Feedback Messages --- */}
+        {operationStatus === "succeeded" && (
+            <p style={{ color: "green" }}>Site created successfully!</p>
         )}
-        {/* You could also show a success message here based on createStatus === 'succeeded' */}
+        {operationStatus === "failed" && operationError && (
+          <p style={{ color: "red" }}>Error: {operationError}</p>
+        )}
       </form>
     </div>
   );
