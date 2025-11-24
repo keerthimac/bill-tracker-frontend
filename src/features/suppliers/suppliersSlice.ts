@@ -42,7 +42,7 @@ const initialState: SuppliersState = {
   operationError: null,
 };
 
-const API_BASE_URL = "http://localhost:8080/api/v1";
+const API_BASE_URL = "http://api/v1";
 
 // --- Async Thunks ---
 export const fetchSuppliers = createAsyncThunk<
@@ -151,7 +151,8 @@ const suppliersSlice = createSlice({
           } else if (typeof payload === "string") {
             state.operationError = payload;
           } else {
-            state.operationError = action.error.message || "An unknown error occurred.";
+            state.operationError =
+              action.error.message || "An unknown error occurred.";
           }
         });
     });

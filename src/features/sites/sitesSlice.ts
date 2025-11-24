@@ -26,7 +26,6 @@ export interface UpdateSiteData extends NewSiteData {
   id: number;
 }
 
-
 // --- SECTION 2: STATE DEFINITION ---
 // This interface defines the complete shape of our 'sites' slice.
 
@@ -53,15 +52,18 @@ const initialState: SitesState = {
 };
 
 // It's good practice to define the base URL as a constant.
-const API_BASE_URL = "http://localhost:8080/api/v1";
-
+const API_BASE_URL = "http://api/v1";
 
 // --- SECTION 3: ASYNC THUNKS ---
 // Thunks handle all asynchronous logic, like API calls.
 // They keep this logic out of our components and centralized in the slice.
 
 // Thunk to FETCH all sites
-export const fetchSites = createAsyncThunk<Site[], void, { rejectValue: string }>(
+export const fetchSites = createAsyncThunk<
+  Site[],
+  void,
+  { rejectValue: string }
+>(
   "sites/fetchSites", // Action type prefix
   async (_, { rejectWithValue }) => {
     try {
@@ -79,66 +81,70 @@ export const fetchSites = createAsyncThunk<Site[], void, { rejectValue: string }
 );
 
 // Thunk to CREATE a new site
-export const createSite = createAsyncThunk<Site, NewSiteData, { rejectValue: { message: string } }>(
-  "sites/createSite",
-  async (newSiteData, { rejectWithValue }) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/sites`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newSiteData),
-      });
-      if (!response.ok) {
-        // Here, we expect the server to send back a JSON with an error message
-        return rejectWithValue(await response.json());
-      }
-      return await response.json();
-    } catch (e: any) {
-      return rejectWithValue({ message: e.message });
+export const createSite = createAsyncThunk<
+  Site,
+  NewSiteData,
+  { rejectValue: { message: string } }
+>("sites/createSite", async (newSiteData, { rejectWithValue }) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/sites`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newSiteData),
+    });
+    if (!response.ok) {
+      // Here, we expect the server to send back a JSON with an error message
+      return rejectWithValue(await response.json());
     }
+    return await response.json();
+  } catch (e: any) {
+    return rejectWithValue({ message: e.message });
   }
-);
+});
 
 // Thunk to UPDATE an existing site
-export const updateSite = createAsyncThunk<Site, UpdateSiteData, { rejectValue: { message: string } }>(
-  "sites/updateSite",
-  async (updateData, { rejectWithValue }) => {
-    try {
-      // Separate the ID from the rest of the data for the request body
-      const { id, ...payload } = updateData;
-      const response = await fetch(`${API_BASE_URL}/sites/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        return rejectWithValue(await response.json());
-      }
-      return await response.json(); // The updated site from the server
-    } catch (e: any) {
-      return rejectWithValue({ message: e.message });
+export const updateSite = createAsyncThunk<
+  Site,
+  UpdateSiteData,
+  { rejectValue: { message: string } }
+>("sites/updateSite", async (updateData, { rejectWithValue }) => {
+  try {
+    // Separate the ID from the rest of the data for the request body
+    const { id, ...payload } = updateData;
+    const response = await fetch(`${API_BASE_URL}/sites/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      return rejectWithValue(await response.json());
     }
+    return await response.json(); // The updated site from the server
+  } catch (e: any) {
+    return rejectWithValue({ message: e.message });
   }
-);
+});
 
 // Thunk to DELETE a site
-export const deleteSite = createAsyncThunk<number, number, { rejectValue: string }>(
-  "sites/deleteSite",
-  async (siteId, { rejectWithValue }) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/sites/${siteId}`, { method: "DELETE" });
-      if (!response.ok) {
-        return rejectWithValue("Failed to delete the site.");
-      }
-      // On success, return the original `siteId`. The reducer will use this
-      // to know which site to remove from the state array.
-      return siteId;
-    } catch (e: any) {
-      return rejectWithValue(e.message);
+export const deleteSite = createAsyncThunk<
+  number,
+  number,
+  { rejectValue: string }
+>("sites/deleteSite", async (siteId, { rejectWithValue }) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/sites/${siteId}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      return rejectWithValue("Failed to delete the site.");
     }
+    // On success, return the original `siteId`. The reducer will use this
+    // to know which site to remove from the state array.
+    return siteId;
+  } catch (e: any) {
+    return rejectWithValue(e.message);
   }
-);
-
+});
 
 // --- SECTION 4: SLICE DEFINITION ---
 // The slice brings together the state, reducers, and actions.
@@ -169,14 +175,18 @@ const sitesSlice = createSlice({
         .addCase(thunk.rejected, (state, action) => {
           // When any of these thunks fail, set status to 'failed' and store the error.
           state.operationStatus = "failed";
-          const payload = action.payload as { message: string } | string | undefined;
+          const payload = action.payload as
+            | { message: string }
+            | string
+            | undefined;
           // Robustly get the error message, whether it's an object or a string.
           if (typeof payload === "object" && payload?.message) {
             state.operationError = payload.message;
-          } else if (typeof payload === 'string') {
+          } else if (typeof payload === "string") {
             state.operationError = payload;
           } else {
-            state.operationError = action.error.message || "An unknown error occurred.";
+            state.operationError =
+              action.error.message || "An unknown error occurred.";
           }
         });
     });
@@ -218,7 +228,6 @@ const sitesSlice = createSlice({
   },
 });
 
-
 // --- SECTION 5: EXPORTS ---
 
 // Export the synchronous action creator
@@ -235,5 +244,7 @@ export const selectSitesStatus = (state: RootState) => state.sites.status;
 export const selectSitesError = (state: RootState) => state.sites.error;
 export const selectSiteById = (state: RootState, siteId: number) =>
   state.sites.sites.find((s) => s.id === siteId);
-export const selectSiteOperationStatus = (state: RootState) => state.sites.operationStatus;
-export const selectSiteOperationError = (state: RootState) => state.sites.operationError;
+export const selectSiteOperationStatus = (state: RootState) =>
+  state.sites.operationStatus;
+export const selectSiteOperationError = (state: RootState) =>
+  state.sites.operationError;

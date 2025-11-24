@@ -44,7 +44,7 @@ const initialState: BrandsState = {
   operationError: null,
 };
 
-const API_BASE_URL = "http://localhost:8080/api/v1";
+const API_BASE_URL = "http://api/v1";
 
 // --- Async Thunks ---
 
