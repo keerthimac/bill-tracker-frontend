@@ -18,9 +18,13 @@ function DashboardLayout(): JSX.Element {
   return (
     <div className="drawer lg:drawer-open">
       <input id="app-drawer-toggle" type="checkbox" className="drawer-toggle" />
-      <div className="drawer-content flex flex-col bg-base-200">
+      <div className="drawer-content flex flex-col bg-slate-50">
         <Header onToggleSidebar={() => { const checkbox = document.getElementById('app-drawer-toggle') as HTMLInputElement; if (checkbox) checkbox.checked = !checkbox.checked; }} />
-        <main className="flex-1 p-6 bg-base-100 overflow-y-auto"><Outlet /></main>
+        <main className="flex-1 p-6 overflow-y-auto">
+          <div className="animate-fade-in">
+            <Outlet />
+          </div>
+        </main>
       </div>
       <div className="drawer-side z-40">
         <label htmlFor="app-drawer-toggle" aria-label="close sidebar" className="drawer-overlay"></label> 

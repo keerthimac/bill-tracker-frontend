@@ -52,7 +52,7 @@ const initialState: SitesState = {
 };
 
 // It's good practice to define the base URL as a constant.
-const API_BASE_URL = "http://api/v1";
+const API_BASE_URL = "http://localhost:8080/api/v1";
 
 // --- SECTION 3: ASYNC THUNKS ---
 // Thunks handle all asynchronous logic, like API calls.

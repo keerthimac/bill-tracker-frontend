@@ -17,7 +17,7 @@ interface AuthState {
   error: string | null;
 }
 
-// NEW: Explicit types for thunk payloads
+// Explicit types for thunk payloads
 interface LoginSuccessPayload {
     user: User;
     token: string;
@@ -27,7 +27,7 @@ interface LoginRejectPayload {
     message: string;
 }
 
-// --- Mock API & Initial State ---
+// --- Load user from storage ---
 const loadUserFromStorage = (): { token: string | null; user: User | null } => {
     const token = localStorage.getItem("authToken");
     const userJson = localStorage.getItem("user");
@@ -51,40 +51,57 @@ const initialState: AuthState = {
   error: null,
 };
 
-// --- Async Thunks (Corrected with explicit types) ---
+// --- Async Thunks (Real API Integration) ---
 export const loginUser = createAsyncThunk<
-    LoginSuccessPayload, // Type for a successful return
-    { username: string; password: string }, // Type for the argument passed to the thunk
-    { rejectValue: LoginRejectPayload } // Type for the value returned from rejectWithValue
+    LoginSuccessPayload,
+    { username: string; password: string },
+    { rejectValue: LoginRejectPayload }
 >(
   "auth/loginUser",
   async (credentials, { rejectWithValue }) => {
-    // This mock function returns a promise that either resolves with LoginSuccessPayload
-    // or rejects with LoginRejectPayload.
-    const mockApiLogin = new Promise<LoginSuccessPayload>((resolve, reject) => {
-        setTimeout(() => {
-            if (credentials.username === "officer@test.com" && credentials.password === "password") {
-                const user: User = { id: 'userPO', username: 'officer@test.com', displayName: 'Purchase Officer', role: 'purchase_officer' };
-                const token = "mock-jwt-for-po";
-                resolve({ user, token });
-            } else if (credentials.username === "admin@test.com" && credentials.password === "password") {
-                const user: User = { id: 'userAdmin', username: 'admin@test.com', displayName: 'Admin User', role: 'admin' };
-                const token = "mock-jwt-for-admin";
-                resolve({ user, token });
-            } else {
-                reject({ message: "Invalid username or password." });
-            }
-        }, 500);
-    });
-
     try {
-        const response = await mockApiLogin; // Await the promise
-        localStorage.setItem("authToken", response.token);
-        localStorage.setItem("user", JSON.stringify(response.user));
-        return response; // This becomes the fulfilled action payload
+      const response = await fetch("http://localhost:8080/api/v1/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: credentials.username,
+          password: credentials.password,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Login failed" }));
+        return rejectWithValue({ 
+          message: errorData.message || `Login failed with status ${response.status}` 
+        });
+      }
+
+      const data = await response.json();
+      
+      // Assuming backend returns: { token: string, user: { id, username, displayName, role } }
+      // Adjust this based on your actual backend response structure
+      const loginResponse: LoginSuccessPayload = {
+        token: data.token || data.accessToken, // Handle both possible field names
+        user: {
+          id: data.user?.id || data.id || 'unknown',
+          username: data.user?.username || data.username || credentials.username,
+          displayName: data.user?.displayName || data.user?.name || data.displayName || credentials.username,
+          role: data.user?.role || data.role || 'purchase_officer',
+        }
+      };
+
+      // Store in localStorage
+      localStorage.setItem("authToken", loginResponse.token);
+      localStorage.setItem("user", JSON.stringify(loginResponse.user));
+      
+      return loginResponse;
     } catch (error: any) {
-        // If the promise rejects, catch the error and use rejectWithValue
-        return rejectWithValue(error as LoginRejectPayload);
+      // Network error or other issues
+      return rejectWithValue({ 
+        message: error.message || "Network error. Please check if the backend is running." 
+      });
     }
   }
 );
@@ -94,7 +111,7 @@ export const logoutUser = createAsyncThunk("auth/logoutUser", async () => {
   localStorage.removeItem("user");
 });
 
-// --- Slice Definition (Corrected extraReducers) ---
+// --- Slice Definition ---
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -112,13 +129,11 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action: PayloadAction<LoginSuccessPayload>) => {
         state.isLoading = false;
         state.isLoggedIn = true;
-        // TypeScript now knows action.payload has .user and .token
         state.user = action.payload.user;
         state.token = action.payload.token;
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;
-        // TypeScript now knows action.payload could be LoginRejectPayload
         state.error = action.payload?.message || action.error.message || "Login Failed";
       })
       .addCase(logoutUser.fulfilled, (state) => {
@@ -134,7 +149,7 @@ const authSlice = createSlice({
 export const { clearAuthError } = authSlice.actions;
 export default authSlice.reducer;
 
-// --- Selectors (No changes needed here) ---
+// --- Selectors ---
 export const selectCurrentUser = (state: RootState) => state.auth.user;
 export const selectIsLoggedIn = (state: RootState) => state.auth.isLoggedIn;
 export const selectAuthIsLoading = (state: RootState) => state.auth.isLoading;

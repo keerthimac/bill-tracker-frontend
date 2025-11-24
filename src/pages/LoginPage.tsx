@@ -31,13 +31,20 @@ function LoginPage(): JSX.Element {
   const logoUrl = '/assets/logo.png'; 
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-base-200 px-4 py-12">
-      <div className="card w-full max-w-md bg-base-100 shadow-xl">
-        <div className="card-body items-center text-center">
-          <div className="mb-6"><img src={logoUrl} alt="Company Logo" className="h-20 w-auto" /></div>
-          <h1 className="card-title text-3xl !mb-1 text-primary">Bill Tracker System</h1>
-          <p className="mt-0 text-sm text-base-content/70">Please log in to continue</p>
-          <LoginForm onSubmit={handleLoginSubmit} isLoading={isLoading} serverError={authError} />
+    <div className="flex items-center justify-center min-h-screen bg-blobs bg-pattern-dots px-4 py-12">
+      <div className="card-clean w-full max-w-md p-8 animate-scale-in">
+        <div className="text-center mb-8">
+          <div className="mb-6 inline-block">
+            <img src={logoUrl} alt="Company Logo" className="h-20 w-auto mx-auto drop-shadow-lg" />
+          </div>
+          <h1 className="text-4xl font-heading text-gradient-colorful mb-2">
+            Bill Tracker
+          </h1>
+          <p className="text-slate-600 text-sm">Welcome back! Please sign in to continue</p>
+        </div>
+        <LoginForm onSubmit={handleLoginSubmit} isLoading={isLoading} serverError={authError} />
+        <div className="mt-6 text-center text-xs text-slate-500">
+          <p>Secure inventory management system</p>
         </div>
       </div>
     </div>

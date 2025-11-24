@@ -6,28 +6,28 @@ import { FiHome, FiFileText, FiPackage, FiBriefcase, FiTag, FiUsers, FiSettings,
 import { FaBoxOpen } from 'react-icons/fa';
 
 const getNavLinkClass = ({ isActive }: { isActive: boolean }): string => {
-    return isActive ? 'active' : '';
+    return isActive ? 'nav-item active' : 'nav-item';
 };
 
-// Define navigation items for each role
+// Define navigation items with colors for each icon
 const poNavItems = [
-    { label: 'Dashboard', path: '/', icon: <FiHome /> },
-    { label: 'Purchase Bills', path: '/purchase-bills', icon: <FiFileText /> },
-    { label: 'Master Materials', path: '/master-materials', icon: <FiPackage /> },
-    { label: 'Suppliers', path: '/suppliers', icon: <FiBriefcase /> },
+    { label: 'Dashboard', path: '/', icon: <FiHome />, iconColor: 'nav-icon-blue' },
+    { label: 'Purchase Bills', path: '/purchase-bills', icon: <FiFileText />, iconColor: 'nav-icon-purple' },
+    { label: 'Master Materials', path: '/master-materials', icon: <FiPackage />, iconColor: 'nav-icon-green' },
+    { label: 'Suppliers', path: '/suppliers', icon: <FiBriefcase />, iconColor: 'nav-icon-teal' },
 ];
 
 const adminNavItems = [
-    { label: 'Dashboard', path: '/', icon: <FiHome /> },
-    { label: 'Purchase Bills', path: '/purchase-bills', icon: <FiFileText /> },
+    { label: 'Dashboard', path: '/', icon: <FiHome />, iconColor: 'nav-icon-blue' },
+    { label: 'Purchase Bills', path: '/purchase-bills', icon: <FiFileText />, iconColor: 'nav-icon-purple' },
     { group: 'Management' },
-    { label: 'Master Materials', path: '/master-materials', icon: <FiPackage /> },
-    { label: 'Suppliers', path: '/suppliers', icon: <FiBriefcase /> },
-    { label: 'Brands', path: '/brands', icon: <FiTag /> },
-    { label: 'Supplier Prices', path: '/supplier-prices', icon: <FaBoxOpen /> },
+    { label: 'Master Materials', path: '/master-materials', icon: <FiPackage />, iconColor: 'nav-icon-green' },
+    { label: 'Suppliers', path: '/suppliers', icon: <FiBriefcase />, iconColor: 'nav-icon-teal' },
+    { label: 'Brands', path: '/brands', icon: <FiTag />, iconColor: 'nav-icon-pink' },
+    { label: 'Supplier Prices', path: '/supplier-prices', icon: <FaBoxOpen />, iconColor: 'nav-icon-orange' },
     { group: 'Setup' },
-    { label: 'Sites', path: '/sites', icon: <FiUsers /> },
-    { label: 'Item Categories', path: '/item-categories', icon: <FiSettings /> },
+    { label: 'Sites', path: '/sites', icon: <FiUsers />, iconColor: 'nav-icon-purple' },
+    { label: 'Item Categories', path: '/item-categories', icon: <FiSettings />, iconColor: 'nav-icon-blue' },
 ];
 
 
@@ -38,29 +38,72 @@ function Sidebar({ onLogout }: { onLogout: () => void }): JSX.Element {
     const navigationItems = currentUser?.role === 'admin' ? adminNavItems : poNavItems;
 
     return (
-        <ul className="menu p-4 w-64 min-h-full bg-base-200 text-base-content">
-            <li className="mb-4"><NavLink to="/" className="text-xl font-bold p-2 hover:bg-transparent flex items-center gap-2"><img src={logoUrl} alt="Logo" className="h-8 w-auto" /><span>Bill Tracker</span></NavLink></li>
-            {currentUser && <li className="menu-title text-xs px-4"><span>{currentUser.displayName} ({currentUser.role})</span></li>}
+        <aside className="flex flex-col w-64 min-h-full bg-white border-r border-slate-100 p-4">
+            {/* Logo & Branding */}
+            <div className="mb-8">
+                <NavLink to="/" className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg transition-colors" end>
+                    <img src={logoUrl} alt="Logo" className="h-10 w-auto" />
+                    <div className="flex flex-col">
+                        <span className="text-xl font-heading font-bold text-gradient-colorful">
+                            Bill Tracker
+                        </span>
+                        <span className="text-xs text-slate-500">Inventory System</span>
+                    </div>
+                </NavLink>
+            </div>
             
-            {/* CORRECTED: Using a more robust type guard with the 'in' operator */}
-            {navigationItems.map((item, index) => {
-                // Check for the *presence* of the 'group' key.
-                if ('group' in item) {
-                    return <li key={`group-${index}`} className="menu-title mt-4"><span>{item.group}</span></li>;
-                }
-                // If the 'group' key is not present, it must be a NavLink item.
-                return (
-                    <li key={item.label}>
-                        <NavLink to={item.path} className={getNavLinkClass} end={item.path === '/'}>
-                            <span className="text-lg">{item.icon}</span>
-                            {item.label}
+            {/* User Card */}
+            {currentUser && (
+                <div className="mb-6 p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border border-blue-100">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                            {currentUser.displayName?.charAt(0).toUpperCase() || 'U'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm text-slate-800 truncate">{currentUser.displayName}</p>
+                            <span className="badge badge-blue text-xs capitalize">{currentUser.role}</span>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            {/* Navigation */}
+            <nav className="flex-1 space-y-1">
+                {navigationItems.map((item, index) => {
+                    if ('group' in item) {
+                        return (
+                            <div key={`group-${index}`} className="pt-6 pb-2 px-3">
+                                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                                    {item.group}
+                                </span>
+                            </div>
+                        );
+                    }
+                    return (
+                        <NavLink 
+                            key={item.label}
+                            to={item.path} 
+                            className={getNavLinkClass} 
+                            end={item.path === '/'}
+                        >
+                            <span className={`text-xl ${item.iconColor}`}>{item.icon}</span>
+                            <span>{item.label}</span>
                         </NavLink>
-                    </li>
-                );
-            })}
+                    );
+                })}
+            </nav>
 
-            <li className="mt-auto"><button onClick={onLogout} className="btn btn-error btn-sm w-full"><FiLogOut className="mr-2"/>Log Out</button></li>
-        </ul>
+            {/* Logout Button */}
+            <div className="pt-4 mt-4 border-t border-slate-100">
+                <button 
+                    onClick={onLogout} 
+                    className="btn btn-ghost w-full justify-start gap-3 text-slate-600 hover:bg-red-50 hover:text-red-600 transition-all"
+                >
+                    <FiLogOut className="text-lg" />
+                    <span className="font-medium">Log Out</span>
+                </button>
+            </div>
+        </aside>
     );
 }
 export default Sidebar;

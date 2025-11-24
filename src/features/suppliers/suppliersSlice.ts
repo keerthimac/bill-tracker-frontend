@@ -42,7 +42,16 @@ const initialState: SuppliersState = {
   operationError: null,
 };
 
-const API_BASE_URL = "http://api/v1";
+const API_BASE_URL = "http://localhost:8080/api/v1";
+
+// Helper function to get auth headers
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("authToken");
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+  };
+};
 
 // --- Async Thunks ---
 export const fetchSuppliers = createAsyncThunk<
@@ -51,7 +60,9 @@ export const fetchSuppliers = createAsyncThunk<
   { rejectValue: string }
 >("suppliers/fetchSuppliers", async (_, { rejectWithValue }) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/suppliers`);
+    const response = await fetch(`${API_BASE_URL}/suppliers`, {
+      headers: getAuthHeaders(),
+    });
     if (response.status === 204) return []; // Handle no content
     if (!response.ok) {
       return rejectWithValue("Failed to fetch suppliers.");
@@ -70,11 +81,12 @@ export const createSupplier = createAsyncThunk<
   try {
     const response = await fetch(`${API_BASE_URL}/suppliers`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify(newSupplier),
     });
     if (!response.ok) {
-      return rejectWithValue(await response.json());
+      const errorData = await response.json().catch(() => ({ message: "Failed to create supplier" }));
+      return rejectWithValue(errorData);
     }
     return await response.json();
   } catch (err: any) {
@@ -91,11 +103,12 @@ export const updateSupplier = createAsyncThunk<
     const { id, ...updateData } = supplierData;
     const response = await fetch(`${API_BASE_URL}/suppliers/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify(updateData),
     });
     if (!response.ok) {
-      return rejectWithValue(await response.json());
+      const errorData = await response.json().catch(() => ({ message: "Failed to update supplier" }));
+      return rejectWithValue(errorData);
     }
     return await response.json();
   } catch (err: any) {
@@ -111,9 +124,10 @@ export const deleteSupplier = createAsyncThunk<
   try {
     const response = await fetch(`${API_BASE_URL}/suppliers/${supplierId}`, {
       method: "DELETE",
+      headers: getAuthHeaders(),
     });
     if (!response.ok) {
-      const err = await response.json();
+      const err = await response.json().catch(() => ({ message: "Failed to delete supplier" }));
       return rejectWithValue(err.message || "Failed to delete supplier.");
     }
     return supplierId;

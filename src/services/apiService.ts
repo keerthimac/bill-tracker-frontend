@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:8080/api/v1";
+ const API_BASE_URL = "http://localhost:8080/api/v1";
 
 // ... (keep your existing fetchSites function if you have one here) ...
 

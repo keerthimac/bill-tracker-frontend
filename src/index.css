@@ -1,13 +1,452 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
 @plugin "daisyui";
+
+/* ============================================
+   VIBRANT LIGHT THEME - Clean & Colorful
+   ============================================ */
 @plugin "daisyui/theme" {
   name: "light";
   default: true;
-  /* A more standard, professional blue */
-  --color-primary: #3b82f6; /* This is like Tailwind's blue-500 */
-  --color-primary-focus: #2563eb; /* A slightly darker shade for hover/focus */
+  
+  /* Primary - Vibrant Blue */
+  --color-primary: #3b82f6;
+  --color-primary-focus: #2563eb;
+  --color-primary-content: #ffffff;
+  
+  /* Secondary - Purple */
+  --color-secondary: #8b5cf6;
+  --color-secondary-focus: #7c3aed;
+  --color-secondary-content: #ffffff;
+  
+  /* Accent - Pink */
+  --color-accent: #ec4899;
+  --color-accent-focus: #db2777;
+  --color-accent-content: #ffffff;
+  
+  /* Clean Light Backgrounds */
+  --color-base-100: #ffffff;
+  --color-base-200: #f8fafc;
+  --color-base-300: #e2e8f0;
+  --color-base-content: #0f172a;
+  
+  /* Semantic Colors - Vibrant */
+  --color-info: #3b82f6;
+  --color-success: #10b981;
+  --color-warning: #f97316;
+  --color-error: #ef4444;
+}
 
-  /* You can also define your secondary/accent colors here */
-  /* --color-secondary: #f97316; */
-  /* --color-accent: #10b981; */
+/* ============================================
+   OPTIONAL DARK THEME - Clean & Modern
+   ============================================ */
+@plugin "daisyui/theme" {
+  name: "dark";
+  
+  /* Adjusted for dark mode */
+  --color-primary: #60a5fa;
+  --color-primary-focus: #3b82f6;
+  --color-primary-content: #ffffff;
+  
+  --color-secondary: #a78bfa;
+  --color-secondary-focus: #8b5cf6;
+  --color-secondary-content: #ffffff;
+  
+  --color-accent: #f472b6;
+  --color-accent-focus: #ec4899;
+  --color-accent-content: #ffffff;
+  
+  /* Dark backgrounds */
+  --color-base-100: #0f172a;
+  --color-base-200: #1e293b;
+  --color-base-300: #334155;
+  --color-base-content: #f1f5f9;
+  
+  --color-info: #60a5fa;
+  --color-success: #34d399;
+  --color-warning: #fb923c;
+  --color-error: #f87171;
+}
+
+/* ============================================
+   CUSTOM COLOR PALETTE - Vibrant & Cheerful
+   ============================================ */
+:root {
+  /* Extended color palette */
+  --color-blue: #3b82f6;
+  --color-purple: #8b5cf6;
+  --color-pink: #ec4899;
+  --color-green: #10b981;
+  --color-orange: #f97316;
+  --color-teal: #14b8a6;
+  --color-indigo: #6366f1;
+  --color-yellow: #eab308;
+  
+  /* Light variants */
+  --color-blue-light: #dbeafe;
+  --color-purple-light: #ede9fe;
+  --color-pink-light: #fce7f3;
+  --color-green-light: #d1fae5;
+  --color-orange-light: #ffedd5;
+  --color-teal-light: #ccfbf1;
+  
+  /* Shadows - Soft & Subtle */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  
+  /* Border Radius - Rounded & Friendly */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-full: 9999px;
+  
+  /* Transitions - Smooth & Quick */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================
+   TYPOGRAPHY - Clean & Modern
+   ============================================ */
+* {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6, .font-heading {
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+body {
+  @apply antialiased;
+  background-color: #f8fafc;
+  color: #0f172a;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ============================================
+   COLORFUL BACKGROUND PATTERNS
+   ============================================ */
+.bg-pattern-dots {
+  background-image: radial-gradient(circle, #e2e8f0 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.bg-pattern-grid {
+  background-image: 
+    linear-gradient(to right, #e2e8f0 1px, transparent 1px),
+    linear-gradient(to bottom, #e2e8f0 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.bg-gradient-colorful {
+  background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 50%, #fce7f3 100%);
+}
+
+.bg-blobs {
+  position: relative;
+  overflow: hidden;
+}
+
+.bg-blobs::before,
+.bg-blobs::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.3;
+  animation: float 20s ease-in-out infinite;
+}
+
+.bg-blobs::before {
+  width: 400px;
+  height: 400px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  top: -200px;
+  left: -200px;
+}
+
+.bg-blobs::after {
+  width: 350px;
+  height: 350px;
+  background: linear-gradient(135deg, #ec4899, #f97316);
+  bottom: -175px;
+  right: -175px;
+  animation-delay: -10s;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -30px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+}
+
+/* ============================================
+   CARD SYSTEM - Clean & Elevated
+   ============================================ */
+.card-clean {
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
+  border: 1px solid #f1f5f9;
+}
+
+.card-clean:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* Colorful card variants */
+.card-blue {
+  border-left: 4px solid var(--color-blue);
+}
+
+.card-purple {
+  border-left: 4px solid var(--color-purple);
+}
+
+.card-pink {
+  border-left: 4px solid var(--color-pink);
+}
+
+.card-green {
+  border-left: 4px solid var(--color-green);
+}
+
+.card-orange {
+  border-left: 4px solid var(--color-orange);
+}
+
+.card-teal {
+  border-left: 4px solid var(--color-teal);
+}
+
+/* ============================================
+   BUTTON SYSTEM - Vibrant & Clear
+   ============================================ */
+.btn {
+  @apply transition-all duration-200;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-xs);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  border: none;
+  color: white;
+}
+
+.btn-accent {
+  background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+  border: none;
+  color: white;
+}
+
+/* ============================================
+   INPUT SYSTEM - Clean & Friendly
+   ============================================ */
+.input, .textarea, .select {
+  @apply transition-all duration-200;
+  border-radius: var(--radius-md);
+  border: 2px solid #e2e8f0;
+  background: white;
+  font-size: 0.9375rem;
+}
+
+.input:focus, .textarea:focus, .select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.input::placeholder, .textarea::placeholder {
+  color: #94a3b8;
+}
+
+/* ============================================
+   SIDEBAR & NAVIGATION - Colorful Icons
+   ============================================ */
+.nav-item {
+  @apply transition-all duration-200;
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 500;
+  color: #475569;
+}
+
+.nav-item:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  transform: translateX(4px);
+}
+
+.nav-item.active {
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, transparent 100%);
+  color: #3b82f6;
+  font-weight: 600;
+  border-left: 3px solid #3b82f6;
+}
+
+/* Colorful nav icons */
+.nav-icon-blue { color: #3b82f6; }
+.nav-icon-purple { color: #8b5cf6; }
+.nav-icon-pink { color: #ec4899; }
+.nav-icon-green { color: #10b981; }
+.nav-icon-orange { color: #f97316; }
+.nav-icon-teal { color: #14b8a6; }
+
+/* ============================================
+   BADGES & TAGS - Colorful Accents
+   ============================================ */
+.badge {
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+}
+
+.badge-blue {
+  background: var(--color-blue-light);
+  color: var(--color-blue);
+}
+
+.badge-purple {
+  background: var(--color-purple-light);
+  color: var(--color-purple);
+}
+
+.badge-pink {
+  background: var(--color-pink-light);
+  color: var(--color-pink);
+}
+
+.badge-green {
+  background: var(--color-green-light);
+  color: var(--color-green);
+}
+
+.badge-orange {
+  background: var(--color-orange-light);
+  color: var(--color-orange);
+}
+
+/* ============================================
+   ANIMATIONS - Smooth & Gentle
+   ============================================ */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+
+/* ============================================
+   SCROLLBAR - Minimal & Clean
+   ============================================ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+.text-gradient-blue {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-purple {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-colorful {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
