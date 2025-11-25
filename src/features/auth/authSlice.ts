@@ -51,7 +51,7 @@ const initialState: AuthState = {
   error: null,
 };
 
-// --- Async Thunks (Real API Integration) ---
+// --- Async Thunks (Mock Authentication) ---
 export const loginUser = createAsyncThunk<
     LoginSuccessPayload,
     { username: string; password: string },
@@ -59,36 +59,19 @@ export const loginUser = createAsyncThunk<
 >(
   "auth/loginUser",
   async (credentials, { rejectWithValue }) => {
+    // Mock authentication - accepts any credentials
     try {
-      const response = await fetch("http://localhost:8080/api/v1/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: credentials.username,
-          password: credentials.password,
-        }),
-      });
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: "Login failed" }));
-        return rejectWithValue({ 
-          message: errorData.message || `Login failed with status ${response.status}` 
-        });
-      }
-
-      const data = await response.json();
-      
-      // Assuming backend returns: { token: string, user: { id, username, displayName, role } }
-      // Adjust this based on your actual backend response structure
+      // Mock successful login response
       const loginResponse: LoginSuccessPayload = {
-        token: data.token || data.accessToken, // Handle both possible field names
+        token: "mock-jwt-token-" + Date.now(),
         user: {
-          id: data.user?.id || data.id || 'unknown',
-          username: data.user?.username || data.username || credentials.username,
-          displayName: data.user?.displayName || data.user?.name || data.displayName || credentials.username,
-          role: data.user?.role || data.role || 'purchase_officer',
+          id: "user-123",
+          username: credentials.username,
+          displayName: credentials.username.split('@')[0] || credentials.username,
+          role: 'admin', // You can change this to 'purchase_officer' or 'supervisor' as needed
         }
       };
 
@@ -98,9 +81,8 @@ export const loginUser = createAsyncThunk<
       
       return loginResponse;
     } catch (error: any) {
-      // Network error or other issues
       return rejectWithValue({ 
-        message: error.message || "Network error. Please check if the backend is running." 
+        message: error.message || "Login failed" 
       });
     }
   }
